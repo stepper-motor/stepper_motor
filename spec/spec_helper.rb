@@ -11,7 +11,7 @@ module StepperMotorRailtieTestHelpers
   end
 
   def fake_app_root
-    File.dirname(__FILE__) + "/../app"
+    File.dirname(__FILE__) + "/app"
   end
 
   def run_generator
