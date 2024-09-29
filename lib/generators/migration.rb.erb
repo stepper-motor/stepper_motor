@@ -1,6 +1,10 @@
 class CreateStepperMotorTables < ActiveRecord::Migration[<%= migration_version %>]
   def change
-    create_table :stepper_motor_journeys, id: <%= uuid_fk? ? ":uuid" : ":serial" %> do |t|
+    <% if uuid_fk? %>
+    create_table :stepper_motor_journeys, id: :uuid do |t|
+    <% else %>
+    create_table :stepper_motor_journeys do |t|
+    <% end %>
       t.string :type, null: false, index: true
       t.string :state, default: "ready"
       t.string :hero_type, null: true

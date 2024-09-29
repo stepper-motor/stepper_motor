@@ -2,9 +2,10 @@ PATH
   remote: .
   specs:
     stepper_motor (0.1.0)
-      activejob (~> 6)
+      activejob
       activerecord (~> 6)
-      railties (~> 6)
+      globalid
+      railties
 
 GEM
   remote: https://rubygems.org/

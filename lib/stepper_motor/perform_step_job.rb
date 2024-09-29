@@ -1,3 +1,5 @@
+require "active_job"
+
 class StepperMotor::PerformStepJob < ActiveJob::Base
   def perform(journey_gid)
     # Pass the GlobalID instead of the record itself, so that we can rescue the non-existing record

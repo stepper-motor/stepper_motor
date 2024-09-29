@@ -2,11 +2,13 @@
 
 require "stepper_motor"
 require "active_support/testing/time_helpers"
+require "active_job"
 require "active_record"
+require "globalid"
 
 module StepperMotorRailtieTestHelpers
   def establish_test_connection
-    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: "test.sqlite3")
+    ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: fake_app_root + "/db.sqlite3")
     StepperMotor::InstallGenerator.source_root(File.dirname(__FILE__) + "/../../lib")
   end
 
@@ -24,10 +26,10 @@ module StepperMotorRailtieTestHelpers
     # Before running the migrations we need to require the migration files, since there is no
     # "full" Rails environment available
     Dir.glob(fake_app_root + "/db/migrate/*.rb").sort.each do |migration_file_path|
-      warn migration_file_path
       require migration_file_path
     end
 
+    ActiveRecord::Migrator.migrations_paths = [File.join(fake_app_root + '/db/migrate')]
     ActiveRecord::Tasks::DatabaseTasks.root = fake_app_root
     ActiveRecord::Tasks::DatabaseTasks.migrate
   end
