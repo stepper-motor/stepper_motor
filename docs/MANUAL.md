@@ -337,5 +337,41 @@ end
 
 If you use in-time scheduling you will need to add the `StepperMotor::ScheduleLoopJob` to your cron jobs, and perform it frequently enough. Note that having just the granularity of your cron jobs (minutes) may not be enough as reattempts of the steps may get scheduled with a smaller delay - of a few seconds, for instance.
 
+## Naming steps
+
+stepper_motor will name steps for you. However, using named steps is useful because you then can insert steps between existing ones, and have your `Journey` correctly identify the right step. Steps are performed in the order they are defined. Imagine you start with this step sequence:
+
+```ruby
+step :one do
+  # perform some action
+end
+
+step :two do
+  # perform some other action
+end
+```
+
+You have a `Journey` which is about to start step `one`. When the step gets performed, StepperMotor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
+
+```ruby
+step :one do
+  # perform some action
+end
+
+step :one_bis_ do
+  # some compliance action
+end
+
+step :two do
+  # perform some other action
+end
+```
+
+Your existing `Journey` is already primed to perform step `two`. However, a `Journey` which is about to perform step `one` will now set `one_bis` as the next step to perform. This allows limited reordering and editing of `Journey` definitions after they have already begun.
+
+So, rules of thumb:
+
+* When steps are recalled to be performed, they get recalled _by name._
+* When preparing for the next step, _the next step from the current in order of definition_ is going to be used.
 
  
