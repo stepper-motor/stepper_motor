@@ -33,6 +33,7 @@ Steps are defined inside the Journey as blocks, and they run in the context of t
 
 * For any one Journey, only one Fiber/Thread/Process may be performing a step on it
 * For any one Journey, only one step can be executing at any given time
+* For any `hero`, multiple different Journeys may exist and be in different stages of completion
 
 The `step` blocks get executed in the context of the `Journey` model instance. This is done so that you can define helper methods in the `Journey` subclass, and make good use of them. A Journey links to just one record - the `hero`.
 
@@ -44,7 +45,6 @@ Add the gem to the application's Gemfile, and then generate and run the migratio
     $ bundle install
     $ bin/rails g stepper_motor:install
     $ bin/rails db:migrate
-
 
 ## Usage
 
@@ -322,7 +322,7 @@ This creates a large number of jobs on your queue, but will be easier to manage.
 ```ruby
 StepperMotor.configure do |c|
   # Use jobs per journey step and enqueue them early
-  c.scheduleing = :schedule_forward
+  c.schedule_via = :waiting_jobs
 end
 ```
 
@@ -331,7 +331,7 @@ or, for in-time scheduling
 ```ruby
 StepperMotor.configure do |c|
   # Use jobs per journey step and enqueue them early
-  c.scheduleing = :schedule_in_time
+  c.schedule_via = :central_task
 end
 ```
 
