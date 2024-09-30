@@ -2,13 +2,15 @@
 
 Is a useful tool for running stepped or iterative workflows inside your Rails application.
 
+Instead of having a chunky README, StepperMotor actually has [a manual](/docs/MANUAL.md) – go give it a read.
+
 ## Installation
 
 Add the gem to the application's Gemfile, and then generate and run the migration
 
     $ bundle add stepper_motor
     $ bundle install
-    $ bin/rails g stepper_motor:install
+    $ bin/rails g stepper_motor:install --uuid # Pass "uuid" if you are using UUID for your primary and foreign keys
     $ bin/rails db:migrate
 
 ## Usage
