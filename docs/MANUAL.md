@@ -21,7 +21,7 @@ We believe all of these solutions do not quite hit the "sweet spot" where step w
 
 * Most Rails apps already have a perfectly fit transactional, durable data store - the main database
 * The devloper should not have intimate understanding of DB atomicity and ActiveRecord `with_lock` and `reload` to have step workflows
-* It should not be necessary to configure a whole extra service (liek Temporal.io) just for supporting those workflows. A service like that should be a part of your monolith, not an external dependency communicated with using complex, overkill dependencies such as gRPC.
+* It should not be necessary to configure a whole extra service (like Temporal.io) just for supporting those workflows. A service like that should be a part of your monolith, not an external application. It should not be necessary to talk to that service using complex, Ruby-unfriendly protocols and interfaces like gRPC.
 
 So, StepperMotor aims to give you "just enough of Temporal-like functionality" for most Rails-bound workflows. Without extra dependencies, network calls, services or having to learn extra languages. So let's dive in.
 
