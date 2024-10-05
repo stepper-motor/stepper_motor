@@ -2,10 +2,13 @@ require_relative "../spec_helper"
 
 # rubocop:disable Lint/ConstantDefinitionInBlock
 RSpec.describe "StepperMotor::Journey" do
+  include ActiveJob::TestHelper
+
   before :all do
     establish_test_connection
     run_generator
     run_migrations
+    ActiveJob::Base.queue_adapter = :test
   end
 
   after :all do
@@ -294,7 +297,7 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     journey = InterruptedJourney.create!
-    assert_equal "step1", journey.next_step_name
+    expect(journey.next_step_name).to eq("step1")
 
     perform_enqueued_jobs
     assert_canceled_or_finished(journey)
@@ -413,7 +416,7 @@ RSpec.describe "StepperMotor::Journey" do
 
   def assert_canceled_or_finished(model)
     model.reload
-    assert model.canceled? || model.finished?
+    expect(model.state).to be_in("canceled", "finished")
   end
 
   def read_side_effect(name)
@@ -422,11 +425,11 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   def assert_side_effect(name)
-    assert Thread.current[:stepper_motor_side_effects].key?(name), "A side effect named #{name.inspect} should have been produced, but wasn't"
+    expect(Thread.current[:stepper_motor_side_effects]).to have_key(name), "A side effect named #{name.inspect} should not have been produced, but was"
   end
 
   def refute_side_effect(name)
-    refute Thread.current[:stepper_motor_side_effects].key?(name), "A side effect named #{name.inspect} should not have been produced, but was"
+    expect(Thread.current[:stepper_motor_side_effects]).not_to have_key(name), "A side effect named #{name.inspect} should not have been produced, but was"
   end
 end
 # rubocop:enable Lint/ConstantDefinitionInBlock

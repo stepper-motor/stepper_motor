@@ -56,7 +56,7 @@ module StepperMotor
     # Steps are stacked top to bottom and get performed in sequence.
     def self.step(name = nil, wait: nil, after: nil, &blk)
       wait = if wait && after
-        raise "Either wait: or after: can be specified, but not both"
+        raise ArgumentError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
         0
       elsif after
