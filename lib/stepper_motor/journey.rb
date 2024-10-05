@@ -192,6 +192,7 @@ module StepperMotor
         ready!
       elsif finished?
         logger.info { "was marked finished inside the step" }
+        update!(previous_step_name: current_step_name, next_step_name: nil)
       elsif (next_step_definition = step_definitions[@current_step_definition.seq + 1])
         logger.info { "will continue to #{next_step_definition.name}" }
         set_next_step_and_enqueue(next_step_definition)
@@ -200,6 +201,7 @@ module StepperMotor
         # The hero's journey is complete
         logger.info { "journey completed" }
         finished!
+        update!(previous_step_name: current_step_name, next_step_name: nil)
       end
     ensure
       # The instance variables must not be present if `perform_next_step!` gets called

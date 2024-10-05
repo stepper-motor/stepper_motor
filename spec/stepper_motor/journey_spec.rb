@@ -19,6 +19,11 @@ RSpec.describe "StepperMotor::Journey" do
     Thread.current[:stepper_motor_side_effects] = {}
   end
 
+  after :each do
+    # Remove all jobs that remain in the queue
+    ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+  end
+
   it "allows an empty journey to be defined and performed to completion" do
     class PointlessJourney < StepperMotor::Journey
     end
@@ -40,7 +45,7 @@ RSpec.describe "StepperMotor::Journey" do
     journey.perform_next_step!
     expect(journey).to be_finished
 
-    expect(read_side_effect("do_thing_output.txt")).to eq("StepperMotorTest::SingleStepJourney")
+    expect(read_side_effect("do_thing_output.txt")).to eq("SingleStepJourney")
   end
 
   it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
@@ -73,7 +78,7 @@ RSpec.describe "StepperMotor::Journey" do
 
     step_names.each do |step_name|
       step_output_filename = "multi_step_#{step_name}.txt"
-      expect(read_side_effect(step_output_filename)).to eq("StepperMotorTest::MultiStepJourney")
+      expect(read_side_effect(step_output_filename)).to eq("MultiStepJourney")
     end
   end
 
@@ -104,7 +109,7 @@ RSpec.describe "StepperMotor::Journey" do
 
     3.times do |n|
       step_output_filename = "multi_step_step_#{n}.txt"
-      expect(read_side_effect(step_output_filename)).to eq("StepperMotorTest::AnonymousStepsJourney")
+      expect(read_side_effect(step_output_filename)).to eq("AnonymousStepsJourney")
     end
   end
 
@@ -125,7 +130,7 @@ RSpec.describe "StepperMotor::Journey" do
     journey = CarryingJourney.create!(hero:)
     journey.perform_next_step!
 
-    expect(read_side_effect("only_step_output.txt")).to eq("StepperMotorTest::SomeOtherJourney")
+    expect(read_side_effect("only_step_output.txt")).to eq("SomeOtherJourney")
   end
 
   it "allows a journey where steps are delayed in time using wait:" do
@@ -307,14 +312,14 @@ RSpec.describe "StepperMotor::Journey" do
     refute_side_effect "step1_after_bailout.txt"
   end
 
-  xit "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
+  it "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
     class SomeActor < StepperMotor::Journey
     end
     hero = SomeActor.create!
 
     class ExclusiveJourney < StepperMotor::Journey
       step do
-        raise "We are not testing this here"
+        raise "The step should never be entered as we are not testing the step itself here"
       end
     end
 
@@ -379,7 +384,7 @@ RSpec.describe "StepperMotor::Journey" do
     journey.perform_next_step!
     expect(journey).to be_finished
 
-    expect { journey.perform_next_step! }.not_to raise_rrror
+    expect { journey.perform_next_step! }.not_to raise_error
   end
 
   it "raises an exception if a step changes the journey but does not save it" do
@@ -417,7 +422,7 @@ RSpec.describe "StepperMotor::Journey" do
 
   def assert_canceled_or_finished(model)
     model.reload
-    expect(model.state).to be_in("canceled", "finished")
+    expect(model.state).to be_in(["canceled", "finished"])
   end
 
   def read_side_effect(name)
