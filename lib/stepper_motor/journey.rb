@@ -65,7 +65,7 @@ module StepperMotor
       else
         wait
       end
-      raise "There can not be negative waits" if wait.negative?
+      raise ArgumentError, "wait: cannot be negative, but computed was #{wait}s" if wait.negative?
       name ||= "step_%d" % (step_definitions.length + 1)
       name = name.to_s
 

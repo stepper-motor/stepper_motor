@@ -211,26 +211,22 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     failing_journey = FailingJourney.create!
-    assert_raises(StandardError) do
-      failing_journey.perform_next_step!
-    end
-    assert_equal failing_journey.steps_entered, 1
-    assert_equal failing_journey.steps_completed, 0
+    expect { failing_journey.perform_next_step! }.to raise_error(/oops/)
+    expect(failing_journey.steps_entered).to eq(1)
+    expect(failing_journey.steps_completed).to eq(0)
 
-    assert_raises(StandardError) do
-      failing_journey.perform_next_step!
-    end
-    assert_equal failing_journey.steps_entered, 2
-    assert_equal failing_journey.steps_completed, 0
+    expect { failing_journey.perform_next_step! }.to raise_error(/oops/)
+    expect(failing_journey.steps_entered).to eq(2)
+    expect(failing_journey.steps_completed).to eq(0)
 
     non_failing_journey = NotFailingJourney.create!
     non_failing_journey.perform_next_step!
-    assert_equal non_failing_journey.steps_entered, 1
-    assert_equal non_failing_journey.steps_completed, 1
+    expect(non_failing_journey.steps_entered).to eq(1)
+    expect(non_failing_journey.completed).to eq(1)
   end
 
   it "does not allow invalid values for after: and wait:" do
-    assert_raises do
+    expect {
       class MisconfiguredJourney1 < StepperMotor::Journey
         step after: 10.hours do
           # pass
@@ -240,23 +236,23 @@ RSpec.describe "StepperMotor::Journey" do
           # pass
         end
       end
-    end
+    }.to raise_error(ArgumentError)
 
-    assert_raises do
+    expect {
       class MisconfiguredJourney2 < StepperMotor::Journey
         step wait: -5.hours do
           # pass
         end
       end
-    end
+    }.to raise_error(ArgumentError)
 
-    assert_raises do
+    expect {
       class MisconfiguredJourney3 < StepperMotor::Journey
         step after: 5.hours, wait: 2.seconds do
           # pass
         end
       end
-    end
+    }.to raise_error(ArgumentError)
   end
 
   it "allows a step to reattempt itself" do
@@ -271,17 +267,17 @@ RSpec.describe "StepperMotor::Journey" do
     perform_enqueued_jobs
 
     journey.reload
-    assert_equal "step_1", journey.previous_step_name
-    assert_equal "step_1", journey.next_step_name
-    assert_in_delta Time.current + 5.minutes, journey.next_step_to_be_performed_at, 1.second
+    expect(journey.previous_step_name).to eq("step_1")
+    expect(journey.next_step_name).to eq("step_1")
+    expect(journey.next_step_to_be_performed_at).to be_within(1.second).of(Time.current + 5.minutes)
 
     travel 5.minutes + 1.second
     perform_enqueued_jobs
 
     journey.reload
-    assert_equal "step_1", journey.previous_step_name
-    assert_equal "step_1", journey.next_step_name
-    assert_in_delta Time.current + 5.minutes, journey.next_step_to_be_performed_at, 1.second
+    expect(journey.previous_step_name).to eq("step_1")
+    expect(journey.next_step_name).to eq("step_1")
+    expect(journey.next_step_to_be_performed_at).to be_within(1.second).of(Time.current + 5.minutes)
   end
 
   it "allows a journey consisting of multiple steps where the first step bails out to be defined and performed to the point of cancellation" do
@@ -332,7 +328,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "forbids multiple steps with the same name within a journey" do
-    assert_raises(ArgumentError) do
+    expect {
       class RepeatedStepsJourney < StepperMotor::Journey
         step :foo do
           true
@@ -342,7 +338,7 @@ RSpec.describe "StepperMotor::Journey" do
           true
         end
       end
-    end
+    }.to raise_error(ArgumentError)
   end
 
   it "finishes the journey after perform_next_step" do
@@ -356,11 +352,11 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     journey = RapidlyFinishingJourney.create!
-    assert_predicate journey, :ready?
+    expect(journey).to be_ready
     journey.perform_next_step!
-    assert_predicate journey, :ready?
+    expect(journey).to be_ready
     journey.perform_next_step!
-    assert_predicate journey, :finished?
+    expect(journey).to be_finished
   end
 
   it "does not enter next step on a finished journey" do
@@ -375,9 +371,9 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     journey = NearInstantJourney.create!
-    assert_predicate journey, :ready?
+    expect(journey).to be_ready
     journey.perform_next_step!
-    assert_predicate journey, :finished?
+    expect(journey).to be_finished
 
     expect { journey.perform_next_step! }.not_to raise_rrror
   end
@@ -390,9 +386,9 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     journey = MutatingJourney.create!
-    assert_raises(StepperMotor::JourneyNotPersisted) do
+    expect {
       journey.perform_next_step!
-    end
+    }.to raise_error(StepperMotor::JourneyNotPersisted)
   end
 
   it "resets the instance variables after performing a step" do
