@@ -73,7 +73,7 @@ module StepperMotor
       raise ArgumentError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      step_definition = StepperMotor::Step.new(name:, wait:, seq: step_definitions.length, &blk)
+      step_definition = StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, &blk)
 
       # As per Rails docs: you need to be aware when using class_attribute with mutable structures
       # as Array or Hash. In such cases, you don’t want to do changes in place. Instead use setters.
@@ -81,15 +81,25 @@ module StepperMotor
       self.step_definitions = step_definitions + [step_definition]
     end
 
+    # Returns the `Step` object for a named step. This is used when performing a step, but can also
+    # be useful in other contexts.
+    #
+    # @param by_step_name[Symbol,String] the name of the step to find
+    # @return [StepperMotor::Step?]
     def self.lookup_step_definition(by_step_name)
       step_definitions.find { |d| d.name.to_s == by_step_name.to_s }
     end
 
     # Alias for the class attribute, for brevity
+    #
+    # @see Journey.step_definitions
     def step_definitions
       self.class.step_definitions
     end
 
+    # Alias for the class method, for brevity
+    #
+    # @see Journey.lookup_step_definition
     def lookup_step_definition(by_step_name)
       self.class.lookup_step_definition(by_step_name)
     end
@@ -223,7 +233,7 @@ module StepperMotor
     def set_next_step_and_enqueue(next_step_definition)
       wait = next_step_definition.wait
       update!(previous_step_name: next_step_name, next_step_name: next_step_definition.name, next_step_to_be_performed_at: Time.current + wait)
-      PerformStepJob.set(wait:).perform_later(to_global_id.to_s)
+      PerformStepJob.set(wait: wait).perform_later(to_global_id.to_s)
     end
 
     def logger

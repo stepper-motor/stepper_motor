@@ -128,7 +128,7 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     hero = SomeOtherJourney.create!
-    journey = CarryingJourney.create!(hero:)
+    journey = CarryingJourney.create!(hero: hero)
     journey.perform_next_step!
 
     expect(read_side_effect("only_step_output.txt")).to eq("SomeOtherJourney")
@@ -329,11 +329,11 @@ RSpec.describe "StepperMotor::Journey" do
     }.not_to raise_error
 
     expect {
-      2.times { ExclusiveJourney.create!(hero:) }
+      2.times { ExclusiveJourney.create!(hero: hero) }
     }.to raise_error(ActiveRecord::RecordNotUnique)
 
     expect {
-      2.times { ExclusiveJourney.create!(hero:, allow_multiple: true) }
+      2.times { ExclusiveJourney.create!(hero: hero, allow_multiple: true) }
     }.not_to raise_error
   end
 
