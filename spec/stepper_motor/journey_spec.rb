@@ -9,6 +9,7 @@ RSpec.describe "StepperMotor::Journey" do
     run_generator
     run_migrations
     ActiveJob::Base.queue_adapter = :test
+    ActiveJob::Base.logger = Logger.new(nil)
   end
 
   after :all do
