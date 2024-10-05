@@ -1,4 +1,4 @@
-class CreateStepperMotorTables < ActiveRecord::Migration[<%= migration_version %>]
+class StepperMotorMigration001 < ActiveRecord::Migration[<%= migration_version %>]
   def change
     <% if uuid_fk? %>
     create_table :stepper_motor_journeys, id: :uuid do |t|

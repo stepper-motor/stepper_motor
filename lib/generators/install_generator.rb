@@ -15,7 +15,14 @@ module StepperMotor
 
     # Generates monolithic migration file that contains all database changes.
     def create_migration_file
-      migration_template "generators/migration.rb.erb", File.join(db_migrate_path, "create_stepper_motor_tables.rb")
+      # Migration files are named "...migration_001.rb" etc. This allows them to be emitted
+      # as they get added, and the order of the migrations can be controlled using predictable sorting.
+      # Adding a new migration to the gem is then just adding a file.
+      migration_file_paths_in_order = Dir.glob(__dir__ + "/*_migration_*.rb.erb").sort
+      migration_file_paths_in_order.each do |migration_template_path|
+        untemplated_migration_filename = File.basename(migration_template_path).gsub(/\.erb$/, "")
+        migration_template(migration_template_path, File.join(db_migrate_path, untemplated_migration_filename))
+      end
     end
 
     private
