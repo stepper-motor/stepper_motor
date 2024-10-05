@@ -131,7 +131,6 @@ module StepperMotor
         return unless ready? && next_step_name == next_step_name_before_locking
         performing!
       end
-
       current_step_name = next_step_name
 
       if current_step_name
@@ -141,6 +140,8 @@ module StepperMotor
         # If there is no step set - just terminate the journey
         return finished! unless current_step_name
       end
+
+      before_step_starts(current_step_name)
 
       # Recover the step definition
       @current_step_definition = lookup_step_definition(current_step_name)
@@ -206,6 +207,7 @@ module StepperMotor
       # and not via background jobs (which reload the model)
       @reattempt_after = nil
       @current_step_definition = nil
+      after_step_completes(current_step_name) if current_step_name
     end
 
     # @return [ActiveSupport::Duration]
@@ -226,6 +228,18 @@ module StepperMotor
       tag = [self.class.to_s, to_param].join(":")
       tag << " at " << @current_step_definition.name if @current_step_definition
       super.tagged(tag)
+    end
+
+    def before_step_starts(step_name)
+    end
+
+    def after_step_completes(step_name)
+    end
+
+    def to_global_id
+      # This gets included into ActiveModel during Rails bootstrap,
+      # for now do this manually
+      GlobalID.create(self, app: "stepper-motor")
     end
   end
 end

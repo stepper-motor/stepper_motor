@@ -11,9 +11,7 @@ module StepperMotor
     include ActiveRecord::Generators::Migration
 
     source_paths << File.join(File.dirname(File.dirname(__FILE__)))
-
-    class_option :database, type: :string, aliases: %i[--db], desc: "The database for your migration. By default, the current environment's primary database is used."
-    class_option :hero_foreign_key_type, type: :string, aliases: %i[--fk], desc: "The foreign key type to use for hero_id. Can be either bigint or uuid"
+    class_option :uuid, type: :boolean, desc: "The foreign key type to use for hero_id. Can be either bigint or uuid"
 
     # Generates monolithic migration file that contains all database changes.
     def create_migration_file
@@ -23,7 +21,7 @@ module StepperMotor
     private
 
     def uuid_fk?
-      options["hero_foreign_key_type"].to_s.downcase == "uuid"
+      options["uuid"].present?
     end
 
     def migration_version

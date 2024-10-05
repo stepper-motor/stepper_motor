@@ -217,6 +217,12 @@ RSpec.describe "StepperMotor::Journey" do
     assert_equal failing_journey.steps_entered, 1
     assert_equal failing_journey.steps_completed, 0
 
+    assert_raises(StandardError) do
+      failing_journey.perform_next_step!
+    end
+    assert_equal failing_journey.steps_entered, 2
+    assert_equal failing_journey.steps_completed, 0
+
     non_failing_journey = NotFailingJourney.create!
     non_failing_journey.perform_next_step!
     assert_equal non_failing_journey.steps_entered, 1
@@ -312,17 +318,17 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    assert_nothing_raised do
+    expect {
       2.times { ExclusiveJourney.create! }
-    end
+    }.not_to raise_error
 
-    assert_raise(ActiveRecord::RecordNotUnique) do
+    expect {
       2.times { ExclusiveJourney.create!(hero:) }
-    end
+    }.to raise_error(ActiveRecord::RecordNotUnique)
 
-    assert_nothing_raised do
+    expect {
       2.times { ExclusiveJourney.create!(hero:, allow_multiple: true) }
-    end
+    }.not_to raise_error
   end
 
   it "forbids multiple steps with the same name within a journey" do
@@ -373,7 +379,7 @@ RSpec.describe "StepperMotor::Journey" do
     journey.perform_next_step!
     assert_predicate journey, :finished?
 
-    assert_nothing_raised { journey.perform_next_step! }
+    expect { journey.perform_next_step! }.not_to raise_rrror
   end
 
   it "raises an exception if a step changes the journey but does not save it" do
@@ -401,12 +407,12 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     journey = SelfResettingJourney.create!
-    assert_nothing_raised { journey.perform_next_step! }
-    assert_nil journey.instance_variable_get(:@current_step_definition)
+    expect { journey.perform_next_step! }.not_to raise_error
+    expect(journey.instance_variable_get(:@current_step_definition)).to be_nil
 
-    assert_nothing_raised { journey.perform_next_step! }
-    assert_nil journey.instance_variable_get(:@current_step_definition)
-    assert_nil journey.instance_variable_get(:@reattempt_after)
+    expect { journey.perform_next_step! }.not_to raise_error
+    expect(journey.instance_variable_get(:@current_step_definition)).to be_nil
+    expect(journey.instance_variable_get(:@reattempt_after)).to be_nil
   end
 
   def assert_canceled_or_finished(model)
