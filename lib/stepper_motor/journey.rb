@@ -40,7 +40,7 @@ module StepperMotor
     belongs_to :hero, polymorphic: true, optional: true
 
     STATES = %w[ready performing canceled finished]
-    enum state: STATES
+    enum state: STATES.zip(STATES).to_h, _default: "ready"
 
     # Allows querying for journeys for this specific hero. This uses a scope for convenience as the hero
     # is referenced using it's global ID (same ID that ActiveJob uses for serialization)
@@ -225,9 +225,14 @@ module StepperMotor
     end
 
     def logger
-      tag = [self.class.to_s, to_param].join(":")
-      tag << " at " << @current_step_definition.name if @current_step_definition
-      super.tagged(tag)
+      if super
+        tag = [self.class.to_s, to_param].join(":")
+        tag << " at " << @current_step_definition.name if @current_step_definition
+        super.tagged(tag)
+      else
+        # Furnish a "null logger"
+        ActiveSupport::Logger.new(nil)
+      end
     end
 
     def before_step_starts(step_name)
