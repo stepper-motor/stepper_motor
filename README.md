@@ -2,8 +2,6 @@
 
 Is a useful tool for running stepped or iterative workflows inside your Rails application.
 
-Instead of having a chunky README, StepperMotor actually has [a manual](/docs/MANUAL.md) – go give it a read.
-
 ## Installation
 
 Add the gem to the application's Gemfile, and then generate and run the migration
@@ -31,9 +29,13 @@ class SignupJourney < StepperMotor::Journey
     OnboardingCompleteMailer.onboarding_complete_email(hero).deliver_later
   end
 end
+
+SignupJourney.create!(hero: current_user)
 ```
 
+## Want to know more?
 
+Instead of having a chunky README, StepperMotor actually has [a user manual!](/docs/MANUAL.md) – go give it a read.
 
 ## Development
 
