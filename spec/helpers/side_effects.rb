@@ -10,7 +10,7 @@ module SideEffects
   def self.produced?(name)
     Thread.current[:side_effects].to_h.key?(name.to_s)
   end
-    
+
   def self.none?
     Thread.current[:side_effects].to_h.empty?
   end
@@ -25,10 +25,6 @@ module SideEffects
 
   def self.touch!(name)
     Thread.current[:side_effects][name.to_s] = true
-  end
-
-  def self.produced?(name)
-    Thread.current[:side_effects].key?(name.to_s)
   end
 
   RSpec::Matchers.define :have_produced_side_effects_named do |*side_effect_names|

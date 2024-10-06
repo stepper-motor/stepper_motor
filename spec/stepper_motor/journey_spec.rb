@@ -120,7 +120,7 @@ RSpec.describe "StepperMotor::Journey" do
 
     class CarryingJourney < StepperMotor::Journey
       step :only do
-        raise "Incorrect" unless hero.class == SomeOtherJourney
+        raise "Incorrect" unless hero.instance_of?(SomeOtherJourney)
       end
     end
 
