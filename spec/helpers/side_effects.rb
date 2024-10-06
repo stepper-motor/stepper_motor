@@ -7,6 +7,10 @@ module SideEffects
     end
   end
 
+  def self.produced?(name)
+    Thread.current[:side_effects].to_h.key?(name.to_s)
+  end
+    
   def self.none?
     Thread.current[:side_effects].to_h.empty?
   end

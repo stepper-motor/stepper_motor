@@ -37,7 +37,7 @@ RSpec.describe "StepperMotor::Journey" do
   it "allows a journey consisting of one step to be defined and performed to completion" do
     class SingleStepJourney < StepperMotor::Journey
       step :do_thing do
-        Thread.current[:stepper_motor_side_effects]["do_thing_output.txt"] = self.class.to_s
+        SideEffects.touch!("do_thing")
       end
     end
 
@@ -45,8 +45,7 @@ RSpec.describe "StepperMotor::Journey" do
     expect(journey.next_step_to_be_performed_at).not_to be_nil
     journey.perform_next_step!
     expect(journey).to be_finished
-
-    expect(read_side_effect("do_thing_output.txt")).to eq("SingleStepJourney")
+    expect(SideEffects).to be_produced("do_thing")
   end
 
   it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
@@ -56,7 +55,7 @@ RSpec.describe "StepperMotor::Journey" do
     MultiStepJourney = Class.new(StepperMotor::Journey) do
       step_names.each do |step_name|
         step step_name do
-          Thread.current[:stepper_motor_side_effects]["multi_step_#{step_name}.txt"] = self.class.to_s
+          SideEffects.touch!("from_#{step_name}")
         end
       end
     end
@@ -77,17 +76,16 @@ RSpec.describe "StepperMotor::Journey" do
     expect(journey.next_step_name).to be_nil
     expect(journey.previous_step_name).to eq("step3")
 
-    step_names.each do |step_name|
-      step_output_filename = "multi_step_#{step_name}.txt"
-      expect(read_side_effect(step_output_filename)).to eq("MultiStepJourney")
-    end
+    expect(SideEffects).to be_produced("from_step1")
+    expect(SideEffects).to be_produced("from_step2")
+    expect(SideEffects).to be_produced("from_step3")
   end
 
   it "allows a journey consisting of multiple anonymous steps to be defined and performed to completion" do
     AnonymousStepsJourney = Class.new(StepperMotor::Journey) do
       3.times do |n|
         step do
-          Thread.current[:stepper_motor_side_effects]["multi_step_step_#{n}.txt"] = self.class.to_s
+          SideEffects.touch!("sidefx_#{n}")
         end
       end
     end
@@ -108,10 +106,9 @@ RSpec.describe "StepperMotor::Journey" do
     expect(journey.next_step_name).to be_nil
     expect(journey.previous_step_name).to eq("step_3")
 
-    3.times do |n|
-      step_output_filename = "multi_step_step_#{n}.txt"
-      expect(read_side_effect(step_output_filename)).to eq("AnonymousStepsJourney")
-    end
+    expect(SideEffects).to be_produced("sidefx_0")
+    expect(SideEffects).to be_produced("sidefx_1")
+    expect(SideEffects).to be_produced("sidefx_2")
   end
 
   it "allows an arbitrary ActiveRecord to be attached as the hero" do
@@ -123,15 +120,15 @@ RSpec.describe "StepperMotor::Journey" do
 
     class CarryingJourney < StepperMotor::Journey
       step :only do
-        Thread.current[:stepper_motor_side_effects]["only_step_output.txt"] = hero.class.to_s
+        raise "Incorrect" unless hero.class == SomeOtherJourney
       end
     end
 
     hero = SomeOtherJourney.create!
     journey = CarryingJourney.create!(hero: hero)
-    journey.perform_next_step!
-
-    expect(read_side_effect("only_step_output.txt")).to eq("SomeOtherJourney")
+    expect {
+      journey.perform_next_step!
+    }.not_to raise_error
   end
 
   it "allows a journey where steps are delayed in time using wait:" do
@@ -155,8 +152,6 @@ RSpec.describe "StepperMotor::Journey" do
     expect {
       perform_enqueued_jobs
     }.to not_have_produced_any_side_effects
-
-    refute_side_effect("after_10_hours.txt")
 
     travel 10.hours
     expect {
@@ -296,9 +291,9 @@ RSpec.describe "StepperMotor::Journey" do
   it "allows a journey consisting of multiple steps where the first step bails out to be defined and performed to the point of cancellation" do
     class InterruptedJourney < StepperMotor::Journey
       step :step1 do
-        Thread.current[:stepper_motor_side_effects]["step1_before_bailout.txt"] = self.class.to_s
+        SideEffects.touch!("step1_before_cancel")
         cancel!
-        Thread.current[:stepper_motor_side_effects]["step1_after_bailout.txt"] = self.class.to_s
+        SideEffects.touch!("step1_after_cancel")
       end
 
       step :step2 do
@@ -310,10 +305,9 @@ RSpec.describe "StepperMotor::Journey" do
     expect(journey.next_step_name).to eq("step1")
 
     perform_enqueued_jobs
+    expect(SideEffects).to be_produced("step1_before_cancel")
+    expect(SideEffects).not_to be_produced("step1_after_cancel")
     assert_canceled_or_finished(journey)
-
-    assert_side_effect "step1_before_bailout.txt"
-    refute_side_effect "step1_after_bailout.txt"
   end
 
   it "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
@@ -427,19 +421,6 @@ RSpec.describe "StepperMotor::Journey" do
   def assert_canceled_or_finished(model)
     model.reload
     expect(model.state).to be_in(["canceled", "finished"])
-  end
-
-  def read_side_effect(name)
-    assert_side_effect(name)
-    Thread.current[:stepper_motor_side_effects][name]
-  end
-
-  def assert_side_effect(name)
-    expect(Thread.current[:stepper_motor_side_effects]).to have_key(name), "A side effect named #{name.inspect} should not have been produced, but was"
-  end
-
-  def refute_side_effect(name)
-    expect(Thread.current[:stepper_motor_side_effects]).not_to have_key(name), "A side effect named #{name.inspect} should not have been produced, but was"
   end
 end
 # rubocop:enable Lint/ConstantDefinitionInBlock
