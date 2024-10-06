@@ -8,9 +8,7 @@ RSpec.describe "StepperMotor::InstallGenerator" do
       run_migrations
     }.not_to raise_error
     expect(ActiveRecord::Base.connection.tables).to include("stepper_motor_journeys")
-  end
-
-  after(:each) do
+  ensure
     FileUtils.rm_rf(fake_app_root)
   end
 end
