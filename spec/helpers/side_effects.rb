@@ -32,7 +32,7 @@ module SideEffects
       SideEffects.clear!
       actual.call
       side_effect_names.each do |side_effect_name|
-        expect(SideEffects).to be_produced(side_effect_name)
+        expect(SideEffects).to be_produced(side_effect_name), "The side effect named #{side_effect_name.inspect} should have been produced, but wasn't"
       end
       true
     end
@@ -50,8 +50,9 @@ module SideEffects
       actual.call
 
       side_effect_names.each do |side_effect_name|
-        expect(SideEffects).not_to be_produced(side_effect_name)
+        expect(SideEffects).not_to be_produced(side_effect_name), "The side effect named #{side_effect_name.inspect} should not have been produced, but was"
       end
+
       true
     end
 
