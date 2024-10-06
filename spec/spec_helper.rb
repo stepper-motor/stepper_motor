@@ -5,6 +5,7 @@ require "active_support/testing/time_helpers"
 require "active_job"
 require "active_record"
 require "globalid"
+require_relative "helpers/side_effects"
 
 module StepperMotorRailtieTestHelpers
   def establish_test_connection
@@ -17,7 +18,7 @@ module StepperMotorRailtieTestHelpers
   end
 
   def run_generator
-    generator =  StepperMotor::InstallGenerator.new
+    generator = StepperMotor::InstallGenerator.new
     generator.destination_root = fake_app_root
     generator.create_migration_file
   end
@@ -29,7 +30,7 @@ module StepperMotorRailtieTestHelpers
       require migration_file_path
     end
 
-    ActiveRecord::Migrator.migrations_paths = [File.join(fake_app_root + '/db/migrate')]
+    ActiveRecord::Migrator.migrations_paths = [File.join(fake_app_root + "/db/migrate")]
     ActiveRecord::Tasks::DatabaseTasks.root = fake_app_root
     ActiveRecord::Tasks::DatabaseTasks.migrate
   end
@@ -48,4 +49,5 @@ RSpec.configure do |config|
 
   config.include ActiveSupport::Testing::TimeHelpers
   config.include StepperMotorRailtieTestHelpers
+  config.include SideEffects::SpecHelper
 end

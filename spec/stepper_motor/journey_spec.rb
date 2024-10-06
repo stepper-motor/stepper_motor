@@ -137,73 +137,76 @@ RSpec.describe "StepperMotor::Journey" do
   it "allows a journey where steps are delayed in time using wait:" do
     class TimelyJourney < StepperMotor::Journey
       step wait: 10.hours do
-        Thread.current[:stepper_motor_side_effects]["after_10_hours.txt"] = "t"
+        SideEffects.touch! "after_10_hours.txt"
       end
 
       step wait: 5.minutes do
-        Thread.current[:stepper_motor_side_effects]["after_5_minutes.txt"] = "t"
+        SideEffects.touch! "after_5_minutes.txt"
       end
 
       step do
-        Thread.current[:stepper_motor_side_effects]["final_nowait.txt"] = "t"
+        SideEffects.touch! "final_nowait.txt"
       end
     end
 
     freeze_time
     TimelyJourney.create!
-    perform_enqueued_jobs
+
+    expect {
+      perform_enqueued_jobs
+    }.to not_have_produced_any_side_effects
+
     refute_side_effect("after_10_hours.txt")
 
     travel 10.hours
-    perform_enqueued_jobs
-    assert_side_effect("after_10_hours.txt")
+    expect {
+      perform_enqueued_jobs
+    }.to have_produced_side_effects_named("after_10_hours.txt")
 
     travel 4.minutes
-    perform_enqueued_jobs
-    refute_side_effect("after_5_minutes.txt")
+    expect {
+      perform_enqueued_jobs
+    }.to not_have_produced_any_side_effects
 
     travel 1.minutes
-    perform_enqueued_jobs
-    assert_side_effect("after_5_minutes.txt")
+    expect {
+      perform_enqueued_jobs
+    }.to have_produced_side_effects_named("after_5_minutes.txt")
 
-    perform_enqueued_jobs
-    assert_side_effect("final_nowait.txt")
+    expect {
+      perform_enqueued_jobs
+    }.to have_produced_side_effects_named("final_nowait.txt")
   end
 
   it "allows a journey where steps are delayed in time using after:" do
     class TimelyJourneyUsingAfter < StepperMotor::Journey
       step after: 10.hours do
-        Thread.current[:stepper_motor_side_effects]["after_10_hours.txt"] = "t"
+        SideEffects.touch! "step1"
       end
 
       step after: 605.minutes do
-        Thread.current[:stepper_motor_side_effects]["after_5_minutes.txt"] = "t"
+        SideEffects.touch! "step2"
       end
 
       step do
-        Thread.current[:stepper_motor_side_effects]["final_nowait.txt"] = "t"
+        SideEffects.touch! "step3"
       end
     end
 
-    freeze_time
     TimelyJourneyUsingAfter.create!
-    perform_enqueued_jobs
-    refute_side_effect("after_10_hours.txt")
+    freeze_time
+    expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
 
     travel 10.hours
     perform_enqueued_jobs
-    assert_side_effect("after_10_hours.txt")
+    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step1")
 
     travel 4.minutes
-    perform_enqueued_jobs
-    refute_side_effect("after_5_minutes.txt")
+    expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
 
     travel 1.minutes
-    perform_enqueued_jobs
-    assert_side_effect("after_5_minutes.txt")
-
-    perform_enqueued_jobs
-    assert_side_effect("final_nowait.txt")
+    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step2")
+    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step3")
   end
 
   it "tracks steps entered and completed using counters" do
