@@ -28,18 +28,16 @@ module StepperMotor
     config.to_prepare do
       if defined?(Rails) && Rails.respond_to?(:application)
         config_from_rails = Rails.application.config.try(:gouda)
-        if config_from_rails
-          StepperMotor.config.scheduling_mode = config_from_rails[:scheduling_mode]
-        end
+        # if config_from_rails
+        #  StepperMotor.config.scheduling_mode = config_from_rails[:scheduling_mode]
+        # end
       else
-        Gouda.config.preserve_job_records = false
-        Gouda.config.polling_sleep_interval_seconds = 0.2
+        # Set default configuration
       end
 
-      Gouda::Scheduler.build_scheduler_entries_list!
       begin
-        Gouda::Scheduler.upsert_workloads_from_entries_list!
-      rescue *Gouda::UNINITIALISED_DATABASE_EXCEPTIONS
+        # Perform any tasks which touch the database here
+      rescue *StepperMotor::UNINITIALISED_DATABASE_EXCEPTIONS
         # Do nothing. On a freshly checked-out Rails app, running even unrelated Rails tasks
         # (such as asset compilation) - or, more importantly, initial db:create -
         # will cause a NoDatabaseError, as this is a chicken-and-egg problem. That error
