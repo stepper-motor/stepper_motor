@@ -165,7 +165,7 @@ module StepperMotor
       # enqueue a new job to perform it and stop
       if next_step_to_be_performed_at > Time.current
         logger.warn { "tried to perform #{current_step_name} prematurely" }
-        PerformStepJob.set(wait: next_step_to_be_performed_at - Time.current).perform_later(to_global_id.to_s)
+        schedule!
         return ready!
       end
 
@@ -198,7 +198,7 @@ module StepperMotor
         # The step asked the actions to be attempted at a later time
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
         update!(previous_step_name: current_step_name, next_step_name: current_step_name, next_step_to_be_performed_at: Time.current + @reattempt_after)
-        PerformStepJob.set(wait: @reattempt_after).perform_later(to_global_id.to_s)
+        schedule!
         ready!
       elsif finished?
         logger.info { "was marked finished inside the step" }
@@ -233,14 +233,14 @@ module StepperMotor
     def set_next_step_and_enqueue(next_step_definition)
       wait = next_step_definition.wait
       update!(previous_step_name: next_step_name, next_step_name: next_step_definition.name, next_step_to_be_performed_at: Time.current + wait)
-      PerformStepJob.set(wait: wait).perform_later(to_global_id.to_s)
+      schedule!
     end
 
     def logger
-      if super
+      if (logger_from_parent = super)
         tag = [self.class.to_s, to_param].join(":")
         tag << " at " << @current_step_definition.name if @current_step_definition
-        super.tagged(tag)
+        logger_from_parent.tagged(tag)
       else
         # Furnish a "null logger"
         ActiveSupport::Logger.new(nil)
@@ -251,6 +251,10 @@ module StepperMotor
     end
 
     def after_step_completes(step_name)
+    end
+
+    def schedule!
+      StepperMotor.scheduler.schedule(self)
     end
 
     def to_global_id
