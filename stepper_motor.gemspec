@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.version = StepperMotor::VERSION
   spec.authors = ["Julik Tarkhanov"]
   spec.email = ["me@julik.nl"]
-  spec.license = "Proprietary"
+  spec.license = "LGPL"
 
   spec.summary = "Effortless step workflows that embed nicely inside Rails"
   spec.description = "Step workflows for Rails/ActiveRecord"
