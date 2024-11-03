@@ -5,8 +5,8 @@ require "active_support"
 
 module StepperMotor
   class Error < StandardError; end
-
   class JourneyNotPersisted < Error; end
+  class StepConfigurationError < ArgumentError; end
 
   autoload :Journey, File.dirname(__FILE__) + "/stepper_motor/journey.rb"
   autoload :Step, File.dirname(__FILE__) + "/stepper_motor/step.rb"

@@ -8,35 +8,39 @@ module StepperMotor
   # your own Journey, subclass the `StepperMotor::Journey` class and define your steps. For example, a drip mail
   # campaign can look like this:
   #
-  #   class ResubscribeCampaign < StepperMotor::Journey
-  #     step do
-  #       ReinviteMailer.with(recipient: hero).deliver_later
-  #     end
   #
-  #     step, wait: 3.days do
-  #       cancel! if hero.active?
-  #       ReinviteMailer.with(recipient: hero).deliver_later
+  #     class ResubscribeCampaign < StepperMotor::Journey
+  #       step do
+  #         ReinviteMailer.with(recipient: hero).deliver_later
+  #       end
+  #   
+  #       step, wait: 3.days do
+  #         cancel! if hero.active?
+  #         ReinviteMailer.with(recipient: hero).deliver_later
+  #       end
+  #   
+  #       step, wait: 3.days do
+  #         cancel! if hero.active?
+  #         ReinviteMailer.with(recipient: hero).deliver_later
+  #       end
+  #   
+  #       step, wait: 3.days do
+  #         cancel! if hero.active?
+  #         hero.close_account!
+  #       end
   #     end
-  #
-  #     step, wait: 3.days do
-  #       cancel! if hero.active?
-  #       ReinviteMailer.with(recipient: hero).deliver_later
-  #     end
-  #
-  #     step, wait: 3.days do
-  #       cancel! if hero.active?
-  #       hero.close_account!
-  #     end
-  #   end
   #
   # Creating a record for the Journey (just using `create!`) will instantly send your hero on their way:
   #
-  #    ResubscribeCampaign.create!(hero: current_account)
+  #     ResubscribeCampaign.create!(hero: current_account)
   #
   # To stop the journey forcibly, delete it from your database - or call `cancel!` within any of the steps.
   class Journey < ActiveRecord::Base
     self.table_name = "stepper_motor_journeys"
+
+    # @return [Array] the step definitions defined so far
     class_attribute :step_definitions, default: []
+
     belongs_to :hero, polymorphic: true, optional: true
 
     STATES = %w[ready performing canceled finished]
@@ -56,7 +60,7 @@ module StepperMotor
     # Steps are stacked top to bottom and get performed in sequence.
     def self.step(name = nil, wait: nil, after: nil, &blk)
       wait = if wait && after
-        raise ArgumentError, "Either wait: or after: can be specified, but not both"
+        raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
         0
       elsif after
@@ -65,12 +69,12 @@ module StepperMotor
       else
         wait
       end
-      raise ArgumentError, "wait: cannot be negative, but computed was #{wait}s" if wait.negative?
+      raise StepConfigurationError, "wait: cannot be negative, but computed was #{wait}s" if wait.negative?
       name ||= "step_%d" % (step_definitions.length + 1)
       name = name.to_s
 
       known_step_names = step_definitions.map(&:name)
-      raise ArgumentError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
+      raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
       step_definition = StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, &blk)

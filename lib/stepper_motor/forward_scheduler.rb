@@ -10,7 +10,7 @@
 # * Does not allow easy introspection of jobs in the future (like Redis-based queues)
 # * Limits the value of the `wait:` parameter
 #
-# this scheduler is not a good fit for you, and you will need to use the RepeatingScheduler instead.
+# this scheduler is not a good fit for you, and you will need to use the {CyclicScheduler} instead.
 class StepperMotor::ForwardScheduler
   def schedule(journey)
     wait = journey.next_step_to_be_performed_at - Time.current
