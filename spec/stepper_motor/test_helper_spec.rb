@@ -29,7 +29,16 @@ RSpec.describe "StepperMotor::TestHelper" do
     expect(journey).to be_ready
 
     expect {
-      speedrun_stepper_motor_journey(journey)
+      speedrun_journey(journey)
     }.to have_produced_side_effects_named("step_1", "step_2", "step_3")
+  end
+
+  it "is able to perform a single step forcibly" do
+    journey = SpeedyJourney.create!
+    expect(journey).to be_ready
+
+    expect {
+      immediately_perform_single_step(journey, :step_2)
+    }.to have_produced_side_effects_named("step_2")
   end
 end

@@ -7,7 +7,7 @@ module StepperMotor::TestHelper
   #
   # @param journey[StepperMotor::Journey] the journey to speedrun
   # @return void
-  def speedrun_stepper_motor_journey(journey)
+  def speedrun_journey(journey)
     journey.save!
     n_steps = journey.step_definitions.length
     n_steps.times do
@@ -19,5 +19,16 @@ module StepperMotor::TestHelper
     journey.reload
     journey_did_complete = journey.canceled? || journey.finished?
     raise "Journey #{journey} did not finish or cancel after performing #{n_steps} steps" unless journey_did_complete
+  end
+
+  # Performs the named step of the journey without waiting for the time to perform the step.
+  #
+  # @param journey[StepperMotor::Journey] the journey to speedrun
+  # @param step_name[Symbol] the name of the step to run
+  # @return void
+  def immediately_perform_single_step(journey, step_name)
+    journey.save!
+    journey.update!(next_step_name: step_name, next_step_to_be_performed_at: Time.current)
+    journey.perform_next_step!
   end
 end
