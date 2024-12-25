@@ -12,7 +12,7 @@
 # value, you need to run the scheduler at least (!) every 900 seconds, and preferably
 # more frequently (for example, once every 5 minutes). This scheduler is also going to be
 # more gentle with ActiveJob adapters that may get slower with large queue depths, such as
-# good_job. This scheduler is a good fit if you are using an ActiveJob adapter which: 
+# good_job. This scheduler is a good fit if you are using an ActiveJob adapter which:
 #
 # * Does not allow easy introspection of jobs in the future (like Redis-based queues)
 # * Limits the value of the `wait:` parameter
@@ -58,6 +58,6 @@ class StepperMotor::CyclicScheduler < StepperMotor::ForwardScheduler
     # just before `schedule` gets called). Therefore, it should be sufficient to assume that if the step
     # has to run before the next `run_scheduling_cycle`, we have to schedule a job for it right now.
     time_remaining = journey.next_step_to_be_performed_at - Time.current
-    super(journey) if time_remaining <= @cycle_duration
+    super if time_remaining <= @cycle_duration
   end
 end

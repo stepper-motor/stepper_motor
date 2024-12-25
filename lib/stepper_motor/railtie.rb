@@ -27,7 +27,7 @@ module StepperMotor
     # and before each request in development.
     config.to_prepare do
       if defined?(Rails) && Rails.respond_to?(:application)
-        config_from_rails = Rails.application.config.try(:gouda)
+        _config_from_rails = Rails.application.config.try(:gouda)
         # if config_from_rails
         #  StepperMotor.config.scheduling_mode = config_from_rails[:scheduling_mode]
         # end

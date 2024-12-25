@@ -13,17 +13,17 @@ module StepperMotor
   #       step do
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
-  #   
+  #
   #       step, wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
-  #   
+  #
   #       step, wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
-  #   
+  #
   #       step, wait: 3.days do
   #         cancel! if hero.active?
   #         hero.close_account!
