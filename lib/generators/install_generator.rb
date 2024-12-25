@@ -6,7 +6,7 @@ require "rails/generators/active_record"
 module StepperMotor
   # The generator is used to install StepperMotor. It adds an example Journey, a configing
   # initializer and the migration that creates tables.
-  # Run it with +bin/rails g stepper_motor:install+ in your console.
+  # Run it with `bin/rails g stepper_motor:install` in your console.
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
 

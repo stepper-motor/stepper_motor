@@ -132,6 +132,7 @@ GEM
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.6.0)
+    yard (0.9.37)
     zeitwerk (2.6.18)
 
 PLATFORMS
@@ -144,6 +145,7 @@ DEPENDENCIES
   sqlite3 (~> 1.4)
   standard (= 1.28.5)
   stepper_motor!
+  yard
 
 BUNDLED WITH
    2.4.17
