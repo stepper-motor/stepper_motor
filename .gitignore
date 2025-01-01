@@ -9,3 +9,4 @@
 /spec/app
 # rspec failure tracking
 .rspec_status
+Gemfile.lock
