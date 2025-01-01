@@ -144,6 +144,7 @@ module StepperMotor
         # Make sure no other worker has snatched this journey and made steps instead of us
         return unless ready? && next_step_name == next_step_name_before_locking
         performing!
+        after_locking_for_step(next_step_name)
       end
       current_step_name = next_step_name
 
@@ -249,6 +250,9 @@ module StepperMotor
         # Furnish a "null logger"
         ActiveSupport::Logger.new(nil)
       end
+    end
+
+    def after_locking_for_step(step_name)
     end
 
     def before_step_starts(step_name)
