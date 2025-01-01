@@ -10,7 +10,7 @@ module StepperMotor
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
 
-    source_paths << File.join(File.dirname(File.dirname(__FILE__)))
+    source_paths << File.join(File.dirname(__FILE__, 2))
     class_option :uuid, type: :boolean, desc: "The foreign key type to use for hero_id. Can be either bigint or uuid"
 
     # Generates monolithic migration file that contains all database changes.

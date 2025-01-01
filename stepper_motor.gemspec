@@ -36,7 +36,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "railties"
   spec.add_dependency "globalid"
 
-  spec.add_development_dependency "sqlite3", "~> 1.4"
+  spec.add_development_dependency "sqlite3"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "rspec", "~> 3.0"
   spec.add_development_dependency "standard", "1.28.5" # Needed for 2.6
