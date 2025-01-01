@@ -3,7 +3,7 @@ PATH
   specs:
     stepper_motor (0.1.0)
       activejob
-      activerecord (~> 6)
+      activerecord (>= 6)
       globalid
       railties
 
