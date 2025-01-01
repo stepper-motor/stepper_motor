@@ -16,7 +16,7 @@ class SignupJourney < StepperMotor::Journey
     ServiceUpdateMailer.two_days_spent_email(hero).deliver_later
   end
 
-  step :onboarding_complete_, wait: 15.days do
+  step :onboarding_complete, wait: 15.days do
     OnboardingCompleteMailer.onboarding_complete_email(hero).deliver_later
   end
 end
