@@ -25,6 +25,12 @@ module StepperMotor
       end
     end
 
+    def create_initializer
+      create_file "config/initializers/stepper_motor.rb", <<~RUBY
+        StepperMotor.scheduler = StepperMotor::ForwardScheduler.new
+      RUBY
+    end
+
     private
 
     def uuid_fk?
