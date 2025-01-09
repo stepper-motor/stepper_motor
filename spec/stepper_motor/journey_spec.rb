@@ -5,22 +5,20 @@ RSpec.describe "StepperMotor::Journey" do
   include ActiveJob::TestHelper
 
   it "allows an empty journey to be defined and performed to completion" do
-    class PointlessJourney < StepperMotor::Journey
-    end
-
-    journey = PointlessJourney.create!
+    pointless_class = create_journey_subclass
+    journey = pointless_class.create!
     journey.perform_next_step!
     expect(journey).to be_finished
   end
 
   it "allows a journey consisting of one step to be defined and performed to completion" do
-    class SingleStepJourney < StepperMotor::Journey
+    single_step_class = create_journey_subclass do
       step :do_thing do
         SideEffects.touch!("do_thing")
       end
     end
 
-    journey = SingleStepJourney.create!
+    journey = single_step_class.create!
     expect(journey.next_step_to_be_performed_at).not_to be_nil
     journey.perform_next_step!
     expect(journey).to be_finished
@@ -30,7 +28,7 @@ RSpec.describe "StepperMotor::Journey" do
   it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
     step_names = [:step1, :step2, :step3]
 
-    class MultiStepJourney < StepperMotor::Journey
+    multi_step_journey_class = create_journey_subclass do
       [:step1, :step2, :step3].each do |step_name|
         step step_name do
           SideEffects.touch!("from_#{step_name}")
@@ -38,7 +36,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = MultiStepJourney.create!
+    journey = multi_step_journey_class.create!
     expect(journey.next_step_name).to eq("step1")
 
     journey.perform_next_step!
@@ -60,7 +58,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey consisting of multiple anonymous steps to be defined and performed to completion" do
-    class AnonymousStepsJourney < StepperMotor::Journey
+    anonymous_steps_class = create_journey_subclass do
       3.times do |n|
         step do
           SideEffects.touch!("sidefx_#{n}")
@@ -68,7 +66,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = AnonymousStepsJourney.create!
+    journey = anonymous_steps_class.create!
     expect(journey.next_step_name).to eq("step_1")
 
     journey.perform_next_step!
@@ -90,24 +88,22 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows an arbitrary ActiveRecord to be attached as the hero" do
-    class SomeOtherJourney < StepperMotor::Journey
-    end
-
-    class CarryingJourney < StepperMotor::Journey
+    carried_journey_class = create_journey_subclass
+    carrier_journey_class = create_journey_subclass do
       step :only do
-        raise "Incorrect" unless hero.instance_of?(SomeOtherJourney)
+        raise "Incorrect" unless hero.instance_of?(carried_journey_class)
       end
     end
 
-    hero = SomeOtherJourney.create!
-    journey = CarryingJourney.create!(hero: hero)
+    hero = carried_journey_class.create!
+    journey = carrier_journey_class.create!(hero: hero)
     expect {
       journey.perform_next_step!
     }.not_to raise_error
   end
 
   it "allows a journey where steps are delayed in time using wait:" do
-    class TimelyJourney < StepperMotor::Journey
+    timely_journey_class = carrier_journey_class = create_journey_subclass do
       step wait: 10.hours do
         SideEffects.touch! "after_10_hours.txt"
       end
@@ -122,7 +118,7 @@ RSpec.describe "StepperMotor::Journey" do
     end
 
     freeze_time
-    TimelyJourney.create!
+    timely_journey_class.create!
 
     expect {
       perform_enqueued_jobs
@@ -149,7 +145,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey where steps are delayed in time using after:" do
-    class TimelyJourneyUsingAfter < StepperMotor::Journey
+    journey_class = create_journey_subclass do
       step after: 10.hours do
         SideEffects.touch! "step1"
       end
@@ -163,7 +159,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    timely_journey = TimelyJourneyUsingAfter.create!
+    timely_journey = journey_class.create!
     freeze_time
 
     # Note that the "perform_enqueued_jobs" helper method performs the job even if
@@ -185,19 +181,19 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "tracks steps entered and completed using counters" do
-    class FailingJourney < StepperMotor::Journey
+    failing = create_journey_subclass do
       step do
         raise "oops"
       end
     end
 
-    class NotFailingJourney < StepperMotor::Journey
+    not_failing = create_journey_subclass do
       step do
         true # no-op
       end
     end
 
-    failing_journey = FailingJourney.create!
+    failing_journey = failing.create!
     expect { failing_journey.perform_next_step! }.to raise_error(/oops/)
     expect(failing_journey.steps_entered).to eq(1)
     expect(failing_journey.steps_completed).to eq(0)
@@ -207,7 +203,7 @@ RSpec.describe "StepperMotor::Journey" do
     expect(failing_journey.steps_entered).to eq(2)
     expect(failing_journey.steps_completed).to eq(0)
 
-    non_failing_journey = NotFailingJourney.create!
+    non_failing_journey = not_failing.create!
     non_failing_journey.perform_next_step!
     expect(non_failing_journey.steps_entered).to eq(1)
     expect(non_failing_journey.steps_completed).to eq(1)
@@ -215,7 +211,7 @@ RSpec.describe "StepperMotor::Journey" do
 
   it "does not allow invalid values for after: and wait:" do
     expect {
-      class MisconfiguredJourney1 < StepperMotor::Journey
+      create_journey_subclass do
         step after: 10.hours do
           # pass
         end
@@ -227,7 +223,7 @@ RSpec.describe "StepperMotor::Journey" do
     }.to raise_error(ArgumentError)
 
     expect {
-      class MisconfiguredJourney2 < StepperMotor::Journey
+      create_journey_subclass do
         step wait: -5.hours do
           # pass
         end
@@ -235,7 +231,7 @@ RSpec.describe "StepperMotor::Journey" do
     }.to raise_error(ArgumentError)
 
     expect {
-      class MisconfiguredJourney3 < StepperMotor::Journey
+      create_journey_subclass do
         step after: 5.hours, wait: 2.seconds do
           # pass
         end
@@ -244,14 +240,14 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a step to reattempt itself" do
-    class DeferringJourney < StepperMotor::Journey
+    deferring = create_journey_subclass do
       step do
         reattempt! wait: 5.minutes
         raise "Should never be reached"
       end
     end
 
-    journey = DeferringJourney.create!
+    journey = deferring.create!
     perform_enqueued_jobs
 
     journey.reload
@@ -269,7 +265,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey consisting of multiple steps where the first step bails out to be defined and performed to the point of cancellation" do
-    class InterruptedJourney < StepperMotor::Journey
+    interrupting = create_journey_subclass do
       step :step1 do
         SideEffects.touch!("step1_before_cancel")
         cancel!
@@ -281,7 +277,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = InterruptedJourney.create!
+    journey = interrupting.create!
     expect(journey.next_step_name).to eq("step1")
 
     perform_enqueued_jobs
@@ -291,32 +287,31 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
-    class SomeActor < StepperMotor::Journey
-    end
-    hero = SomeActor.create!
+    actor_class = create_journey_subclass
+    hero = actor_class.create!
 
-    class ExclusiveJourney < StepperMotor::Journey
+    exclusive_journey_class = create_journey_subclass do
       step do
         raise "The step should never be entered as we are not testing the step itself here"
       end
     end
 
     expect {
-      2.times { ExclusiveJourney.create! }
+      2.times { exclusive_journey_class.create! }
     }.not_to raise_error
 
     expect {
-      2.times { ExclusiveJourney.create!(hero: hero) }
+      2.times { exclusive_journey_class.create!(hero: hero) }
     }.to raise_error(ActiveRecord::RecordNotUnique)
 
     expect {
-      2.times { ExclusiveJourney.create!(hero: hero, allow_multiple: true) }
+      2.times { exclusive_journey_class.create!(hero: hero, allow_multiple: true) }
     }.not_to raise_error
   end
 
   it "forbids multiple steps with the same name within a journey" do
     expect {
-      class RepeatedStepsJourney < StepperMotor::Journey
+      create_journey_subclass do
         step :foo do
           true
         end
@@ -329,7 +324,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "finishes the journey after perform_next_step" do
-    class RapidlyFinishingJourney < StepperMotor::Journey
+    rapid = create_journey_subclass do
       step :one do
         true # no-op
       end
@@ -338,7 +333,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = RapidlyFinishingJourney.create!
+    journey = rapid.create!
     expect(journey).to be_ready
     journey.perform_next_step!
     expect(journey).to be_ready
@@ -347,7 +342,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "does not enter next step on a finished journey" do
-    class NearInstantJourney < StepperMotor::Journey
+    near_instant = create_journey_subclass do
       step :one do
         finished!
       end
@@ -357,7 +352,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = NearInstantJourney.create!
+    journey = near_instant.create!
     expect(journey).to be_ready
     journey.perform_next_step!
     expect(journey).to be_finished
@@ -366,20 +361,20 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "raises an exception if a step changes the journey but does not save it" do
-    class MutatingJourney < StepperMotor::Journey
+    mutating = create_journey_subclass do
       step :one do
         self.state = "canceled"
       end
     end
 
-    journey = MutatingJourney.create!
+    journey = mutating.create!
     expect {
       journey.perform_next_step!
     }.to raise_error(StepperMotor::JourneyNotPersisted)
   end
 
   it "resets the instance variables after performing a step" do
-    class SelfResettingJourney < StepperMotor::Journey
+    self_resetting = create_journey_subclass do
       step :one do
         raise unless @current_step_definition
       end
@@ -389,7 +384,7 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    journey = SelfResettingJourney.create!
+    journey = self_resetting.create!
     expect { journey.perform_next_step! }.not_to raise_error
     expect(journey.instance_variable_get(:@current_step_definition)).to be_nil
 

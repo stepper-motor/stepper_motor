@@ -53,6 +53,17 @@ module ActiveSupportTestCaseMethodsStub
   end
 end
 
+module JourneyDefinitionHelper
+  def create_journey_subclass(&blk)
+    # https://stackoverflow.com/questions/4113479/dynamic-class-definition-with-a-class-name
+    random_component = Random.hex(8)
+    random_name = "JourneySubclass#{random_component}"
+    klass = Class.new(StepperMotor::Journey, &blk)
+    Object.const_set(random_name, klass)
+    klass
+  end
+end
+
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
   config.example_status_persistence_file_path = ".rspec_status"
@@ -68,6 +79,7 @@ RSpec.configure do |config|
   config.include StepperMotorRailtieTestHelpers
   config.include SideEffects::SpecHelper
   config.include ActiveSupportTestCaseMethodsStub
+  config.include JourneyDefinitionHelper
 
   config.before :suite do
     StepperMotorRailtieTestHelpers.establish_test_connection

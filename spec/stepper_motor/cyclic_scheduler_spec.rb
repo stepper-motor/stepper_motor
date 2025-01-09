@@ -3,12 +3,6 @@ require_relative "../spec_helper"
 RSpec.describe "StepperMotor::CyclicScheduler" do
   include ActiveJob::TestHelper
 
-  class FarFutureJourney < StepperMotor::Journey
-    step :do_thing, wait: 40.minutes do
-      raise "We do not test this so it should never run"
-    end
-  end
-
   before do
     @previous_scheduler = StepperMotor.scheduler
     StepperMotor::Journey.delete_all
@@ -18,12 +12,22 @@ RSpec.describe "StepperMotor::CyclicScheduler" do
     StepperMotor.scheduler = @previous_scheduler
   end
 
+  def far_future_journey_class
+    @klass ||= begin
+      create_journey_subclass do
+        step :do_thing, wait: 40.minutes do
+          raise "We do not test this so it should never run"
+        end
+      end
+    end
+  end
+
   it "does not schedule a journey which is too far in the future" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 30.seconds)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(FarFutureJourney)).once.and_call_original
-    _journey = FarFutureJourney.create!
+    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
+    _journey = far_future_journey_class.create!
 
     expect(scheduler).not_to receive(:schedule)
     scheduler.run_scheduling_cycle
@@ -33,8 +37,8 @@ RSpec.describe "StepperMotor::CyclicScheduler" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 40.minutes)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(FarFutureJourney)).once.and_call_original
-    journey = FarFutureJourney.create!
+    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
+    journey = far_future_journey_class.create!
 
     expect(scheduler).to receive(:schedule).with(journey).and_call_original
     scheduler.run_scheduling_cycle
@@ -44,8 +48,8 @@ RSpec.describe "StepperMotor::CyclicScheduler" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 10.seconds)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(FarFutureJourney)).once.and_call_original
-    journey = FarFutureJourney.create!
+    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
+    journey = far_future_journey_class.create!
     journey.update!(next_step_to_be_performed_at: 10.minutes.ago)
 
     expect(scheduler).to receive(:schedule).with(journey).and_call_original

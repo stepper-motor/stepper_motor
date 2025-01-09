@@ -10,22 +10,24 @@ RSpec.describe "StepperMotor::TestHelper" do
     run_migrations
   end
 
-  class SpeedyJourney < StepperMotor::Journey
-    step :step_1, wait: 40.minutes do
-      SideEffects.touch!("step_1")
-    end
+  def speedy_journey_class
+    create_journey_subclass do
+      step :step_1, wait: 40.minutes do
+        SideEffects.touch!("step_1")
+      end
 
-    step :step_2, wait: 2.days do
-      SideEffects.touch!("step_2")
-    end
+      step :step_2, wait: 2.days do
+        SideEffects.touch!("step_2")
+      end
 
-    step do
-      SideEffects.touch!("step_3")
+      step do
+        SideEffects.touch!("step_3")
+      end
     end
   end
 
   it "speedruns the journey despite waits being configured" do
-    journey = SpeedyJourney.create!
+    journey = speedy_journey_class.create!
     expect(journey).to be_ready
 
     expect {
@@ -34,7 +36,7 @@ RSpec.describe "StepperMotor::TestHelper" do
   end
 
   it "is able to perform a single step forcibly" do
-    journey = SpeedyJourney.create!
+    journey = speedy_journey_class.create!
     expect(journey).to be_ready
 
     expect {
