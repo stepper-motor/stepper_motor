@@ -24,6 +24,13 @@ module SideEffects
   end
 
   def self.touch!(name)
+    if Thread.current[:side_effects].nil?
+      raise <<~ERROR
+        The current thread locals do not contain :side_effects, which means that your job
+        is running on a different thread than the specs. This is probably due to bad configuration
+        of the ActiveJob test adapter.
+      ERROR
+    end
     Thread.current[:side_effects][name.to_s] = true
   end
 

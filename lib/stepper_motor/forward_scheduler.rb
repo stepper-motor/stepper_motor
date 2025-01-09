@@ -13,8 +13,6 @@
 # this scheduler is not a good fit for you, and you will need to use the {CyclicScheduler} instead.
 class StepperMotor::ForwardScheduler
   def schedule(journey)
-    wait = journey.next_step_to_be_performed_at - Time.current
-    wait = 0 if wait.negative?
-    StepperMotor::PerformStepJob.set(wait: wait).perform_later(journey.to_global_id.to_s)
+    StepperMotor::PerformStepJob.set(scheduled_at: journey.next_step_to_be_performed_at).perform_later(journey.to_global_id.to_s)
   end
 end

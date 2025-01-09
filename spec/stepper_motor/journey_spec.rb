@@ -4,27 +4,6 @@ require_relative "../spec_helper"
 RSpec.describe "StepperMotor::Journey" do
   include ActiveJob::TestHelper
 
-  before :all do
-    establish_test_connection
-    run_generator
-    run_migrations
-    ActiveJob::Base.queue_adapter = :test
-    ActiveJob::Base.logger = Logger.new(nil)
-  end
-
-  after :all do
-    FileUtils.rm_rf(fake_app_root)
-  end
-
-  before :each do
-    Thread.current[:stepper_motor_side_effects] = {}
-  end
-
-  after :each do
-    # Remove all jobs that remain in the queue
-    ActiveJob::Base.queue_adapter.enqueued_jobs.clear
-  end
-
   it "allows an empty journey to be defined and performed to completion" do
     class PointlessJourney < StepperMotor::Journey
     end
@@ -51,9 +30,8 @@ RSpec.describe "StepperMotor::Journey" do
   it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
     step_names = [:step1, :step2, :step3]
 
-    # Use Class.new so that step_names can be passed into the block
-    MultiStepJourney = Class.new(StepperMotor::Journey) do
-      step_names.each do |step_name|
+    class MultiStepJourney < StepperMotor::Journey
+      [:step1, :step2, :step3].each do |step_name|
         step step_name do
           SideEffects.touch!("from_#{step_name}")
         end
@@ -82,7 +60,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey consisting of multiple anonymous steps to be defined and performed to completion" do
-    AnonymousStepsJourney = Class.new(StepperMotor::Journey) do
+    class AnonymousStepsJourney < StepperMotor::Journey
       3.times do |n|
         step do
           SideEffects.touch!("sidefx_#{n}")
@@ -113,9 +91,6 @@ RSpec.describe "StepperMotor::Journey" do
 
   it "allows an arbitrary ActiveRecord to be attached as the hero" do
     class SomeOtherJourney < StepperMotor::Journey
-      step do
-        # nothing, but we need to have a step so that the journey doesn't get destroyed immediately after creation
-      end
     end
 
     class CarryingJourney < StepperMotor::Journey
@@ -188,20 +163,25 @@ RSpec.describe "StepperMotor::Journey" do
       end
     end
 
-    TimelyJourneyUsingAfter.create!
+    timely_journey = TimelyJourneyUsingAfter.create!
     freeze_time
+
+    # Note that the "perform_enqueued_jobs" helper method performs the job even if
+    # its "scheduled_at" lies in the future. Presumably this is done so that testing is
+    # easier to do, but we check the time the journey was set to perform the next step at
+    # - and therefore a job which runs too early will produce another job that replaces it.
     expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
 
-    travel 10.hours
-    perform_enqueued_jobs
+    travel_to(timely_journey.next_step_to_be_performed_at + 1.second)
     expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step1")
 
-    travel 4.minutes
+    travel(4.minutes)
     expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
 
-    travel 1.minutes
+    travel(1.minutes + 1.second)
     expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step2")
     expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step3")
+    expect(enqueued_jobs).to be_empty # Journey ended
   end
 
   it "tracks steps entered and completed using counters" do

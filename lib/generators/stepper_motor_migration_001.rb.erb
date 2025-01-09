@@ -29,7 +29,8 @@ class StepperMotorMigration001 < ActiveRecord::Migration[<%= migration_version %
     add_index :stepper_motor_journeys, [:type, :hero_type, :hero_id]
 
     # A unique index prevents multiple journeys of the same type from being created for a particular hero
-    add_index :stepper_motor_journeys, [:type, :hero_id, :hero_type], where: "allow_multiple = 'f' AND state IN ('ready', 'performing')", unique: true, name: :one_per_hero_index
+    quoted_false = connection.quote(false)
+    add_index :stepper_motor_journeys, [:type, :hero_id, :hero_type], where: "allow_multiple = '#{quoted_false}' AND state IN ('ready', 'performing')", unique: true, name: :one_per_hero_index
 
     # An index is also needed for cleaning up finished and canceled journeys quickly
     # for a specific hero of a specific class

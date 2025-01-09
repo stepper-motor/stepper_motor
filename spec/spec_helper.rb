@@ -6,6 +6,7 @@ require "active_job"
 require "active_record"
 require "globalid"
 require_relative "helpers/side_effects"
+require "fileutils"
 
 module StepperMotorRailtieTestHelpers
   def establish_test_connection
@@ -34,6 +35,22 @@ module StepperMotorRailtieTestHelpers
     ActiveRecord::Tasks::DatabaseTasks.root = fake_app_root
     ActiveRecord::Tasks::DatabaseTasks.migrate
   end
+  extend self
+end
+
+module ActiveSupportTestCaseMethodsStub
+  def self.included(into)
+    into.before(:each) { before_setup } 
+    into.after(:each) { after_teardown }
+  end
+
+  def before_setup
+    # Blank implementation as TestCase modules super() into it
+  end
+
+  def after_teardown
+    # Blank implementation as TestCase modules super() into it
+  end
 end
 
 RSpec.configure do |config|
@@ -50,4 +67,11 @@ RSpec.configure do |config|
   config.include ActiveSupport::Testing::TimeHelpers
   config.include StepperMotorRailtieTestHelpers
   config.include SideEffects::SpecHelper
+  config.include ActiveSupportTestCaseMethodsStub
+
+  config.before :suite do
+    StepperMotorRailtieTestHelpers.establish_test_connection
+    StepperMotorRailtieTestHelpers.run_generator
+    StepperMotorRailtieTestHelpers.run_migrations
+  end
 end

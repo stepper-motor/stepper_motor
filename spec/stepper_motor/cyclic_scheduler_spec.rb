@@ -11,9 +11,6 @@ RSpec.describe "StepperMotor::CyclicScheduler" do
 
   before do
     @previous_scheduler = StepperMotor.scheduler
-    establish_test_connection
-    run_generator
-    run_migrations
     StepperMotor::Journey.delete_all
   end
 
