@@ -358,16 +358,16 @@ This creates a large number of jobs on your queue, but will be easier to manage.
 ```ruby
 StepperMotor.configure do |c|
   # Use jobs per journey step and enqueue them early
-  c.schedule_via = :waiting_jobs
+  c.scheduler = StepperMotor::ForwardScheduler.new
 end
 ```
 
-or, for in-time scheduling
+or, for cyclic scheduling (less jobs on the queue, but you need a decent scheduler for your background jobs to be present:
 
 ```ruby
 StepperMotor.configure do |c|
-  # Use jobs per journey step and enqueue them early
-  c.schedule_via = :central_task
+  # Check for jobs to be created every 5 minutes
+  c.scheduler = StepperMotor::CyclicScheduler.new((cycle_duration: 5.minutes)
 end
 ```
 
