@@ -42,4 +42,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rspec-rails"
   spec.add_development_dependency "standard", "1.28.5" # Needed for 2.6
   spec.add_development_dependency "yard"
+  # redcarpet is needed for the yard gem to enable Github Flavored Markdown
+  spec.add_development_dependency "redcarpet"
 end
