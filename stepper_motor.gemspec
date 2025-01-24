@@ -11,14 +11,14 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Effortless step workflows that embed nicely inside Rails"
   spec.description = "Step workflows for Rails/ActiveRecord"
-  spec.homepage = "https://github.com/stepper_motor/stepper_motor"
+  spec.homepage = "https://github.com/stepper-motor/stepper_motor"
   spec.required_ruby_version = ">= 2.7.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
-  spec.metadata["changelog_uri"] = "https://github.com/stepper_motor/stepper_motor/CHANGELOG.md"
+  spec.metadata["changelog_uri"] = "https://github.com/stepper-motor/stepper_motor/blob/main/CHANGELOG.md"
 
   spec.files = Dir.chdir(__dir__) do
     `git ls-files -z`.split("\x0").reject do |f|
