@@ -40,7 +40,7 @@ end
 
 module ActiveSupportTestCaseMethodsStub
   def self.included(into)
-    into.before(:each) { before_setup } 
+    into.before(:each) { before_setup }
     into.after(:each) { after_teardown }
   end
 

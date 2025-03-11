@@ -1,3 +1,3 @@
-## [0.1.1] - 2025-01-01
+## [0.1.x] - 2025-01-01
 
-- Initial release. Expect bugs of mysterious kinds.
+- Development versions. Expect bugs of mysterious kinds.

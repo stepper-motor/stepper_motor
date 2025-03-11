@@ -13,11 +13,9 @@ RSpec.describe "StepperMotor::CyclicScheduler" do
   end
 
   def far_future_journey_class
-    @klass ||= begin
-      create_journey_subclass do
-        step :do_thing, wait: 40.minutes do
-          raise "We do not test this so it should never run"
-        end
+    @klass ||= create_journey_subclass do
+      step :do_thing, wait: 40.minutes do
+        raise "We do not test this so it should never run"
       end
     end
   end
