@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The forward scheduler enqueues a job for every Journey that
 # gets sent to the `#schedule`. The job is then stored in the queue
 # and gets picked up by the ActiveJob worker normally. This is the simplest

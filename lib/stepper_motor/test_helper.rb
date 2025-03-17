@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module StepperMotor::TestHelper
   # Allows running a given Journey to completion, skipping across the waiting periods.
   # This is useful to evaluate all side effects of a Journey. The helper will ensure

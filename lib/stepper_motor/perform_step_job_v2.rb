@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "active_job"
 
 class StepperMotor::PerformStepJobV2 < ActiveJob::Base

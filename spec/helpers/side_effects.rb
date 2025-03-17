@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module SideEffects
   module SpecHelper
     def self.included(into)

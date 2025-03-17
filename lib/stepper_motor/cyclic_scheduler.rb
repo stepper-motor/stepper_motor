@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # The cyclic scheduler is designed to be run regularly via a cron job. On every
 # cycle, it is going to look for Journeys which are going to come up for step execution
 # before the next cycle is supposed to run. Then it is going to enqueue jobs to perform
