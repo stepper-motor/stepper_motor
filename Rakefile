@@ -5,7 +5,7 @@ require "rspec/core/rake_task"
 require "standard/rake"
 
 task :format do
-  `bundle exec standardrb --fix *.rb scripts/*`
+  `bundle exec standardrb --fix`
   `bundle exec magic_frozen_string_literal .`
 end
 
