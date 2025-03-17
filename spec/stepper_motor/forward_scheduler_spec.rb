@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "../spec_helper"
 
 RSpec.describe "StepperMotor::ForwardScheduler" do
@@ -30,7 +32,7 @@ RSpec.describe "StepperMotor::ForwardScheduler" do
     expect(enqueued_jobs.size).to eq(1)
     job = enqueued_jobs.first
 
-    expect(job["job_class"]).to eq("StepperMotor::PerformStepJob")
+    expect(job["job_class"]).to eq("StepperMotor::PerformStepJobV2")
     expect(job["scheduled_at"]).not_to be_nil
 
     scheduled_at = Time.parse(job["scheduled_at"])

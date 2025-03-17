@@ -85,5 +85,6 @@ RSpec.configure do |config|
     StepperMotorRailtieTestHelpers.establish_test_connection
     StepperMotorRailtieTestHelpers.run_generator
     StepperMotorRailtieTestHelpers.run_migrations
+    ActiveJob::Base.logger.level = Logger::FATAL
   end
 end
