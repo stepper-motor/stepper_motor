@@ -7,6 +7,6 @@ class StepperMotor::PerformStepJobV2 < ActiveJob::Base
     journey = StepperMotor::Journey.find(journey_id)
     journey.perform_next_step!
   rescue ActiveRecord::RecordNotFound
-    return # The journey has been canceled and destroyed previously or elsewhere
+    # The journey has been canceled and destroyed previously or elsewhere
   end
 end
