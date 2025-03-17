@@ -28,8 +28,6 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
-    step_names = [:step1, :step2, :step3]
-
     multi_step_journey_class = create_journey_subclass do
       [:step1, :step2, :step3].each do |step_name|
         step step_name do
@@ -105,7 +103,7 @@ RSpec.describe "StepperMotor::Journey" do
   end
 
   it "allows a journey where steps are delayed in time using wait:" do
-    timely_journey_class = carrier_journey_class = create_journey_subclass do
+    timely_journey_class = create_journey_subclass do
       step wait: 10.hours do
         SideEffects.touch! "after_10_hours.txt"
       end
