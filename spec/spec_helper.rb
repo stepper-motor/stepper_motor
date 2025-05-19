@@ -56,7 +56,7 @@ end
 module JourneyDefinitionHelper
   def create_journey_subclass(&blk)
     # https://stackoverflow.com/questions/4113479/dynamic-class-definition-with-a-class-name
-    random_component = Random.hex(8)
+    random_component = Random.hex(2)
     random_name = "JourneySubclass#{random_component}"
     klass = Class.new(StepperMotor::Journey, &blk)
     Object.const_set(random_name, klass)
