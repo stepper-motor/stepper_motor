@@ -7,7 +7,7 @@ module StepperMotor
     end
 
     generators do
-      require "generators/install_generator"
+      require_relative "../generators/install_generator"
     end
 
     # The `to_prepare` block which is executed once in production
