@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "stepper_motor/version"
+require_relative "stepper_motor/railtie" if defined?(Rails::Railtie)
 require "active_support"
 
 module StepperMotor
@@ -20,7 +21,6 @@ module StepperMotor
   autoload :CyclicScheduler, File.dirname(__FILE__) + "/stepper_motor/cyclic_scheduler.rb"
   autoload :TestHelper, File.dirname(__FILE__) + "/stepper_motor/test_helper.rb"
 
-  require_relative "stepper_motor/railtie" if defined?(Rails::Railtie)
 
   mattr_accessor :scheduler, default: ForwardScheduler.new
 end
