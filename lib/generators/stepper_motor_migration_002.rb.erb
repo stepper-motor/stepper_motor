@@ -1,6 +1,6 @@
 class StepperMotorMigration002 < ActiveRecord::Migration[<%= migration_version %>]
   def change
     # An index is needed to recover stuck journeys
-    add_index :stepper_motor_journeys, [:updated_at], name: "stuck_journeys_index", where: "state = 'performing'", algorithm: :concurrently
+    add_index :stepper_motor_journeys, [:updated_at], name: "stuck_journeys_index", where: "state = 'performing'"
   end
 end
