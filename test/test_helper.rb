@@ -16,12 +16,27 @@ if ActiveSupport::TestCase.respond_to?(:fixture_paths=)
 end
 
 module JourneyDefinitionHelper
+  def setup
+    @class_names_rng = Random.new(Minitest.seed)
+    @dynamic_class_names = Set.new
+    super
+  end
+
+  def teardown
+    @dynamic_class_names.each do |name|
+      Object.send(:remove_const, name)
+    end
+    @dynamic_class_names.clear
+    super
+  end
+
   def create_journey_subclass(&blk)
     # https://stackoverflow.com/questions/4113479/dynamic-class-definition-with-a-class-name
-    random_component = Random.hex(2)
-    random_name = "JourneySubclass#{random_component}"
+    random_component = @class_names_rng.hex(8)
+    random_name = "JourneySubclass_#{random_component}"
     klass = Class.new(StepperMotor::Journey, &blk)
     Object.const_set(random_name, klass)
+    @dynamic_class_names << random_name
     klass
   end
 end
