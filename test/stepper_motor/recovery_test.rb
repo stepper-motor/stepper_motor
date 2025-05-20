@@ -7,7 +7,7 @@ class RecoveryTest < ActiveSupport::TestCase
     StepperMotor::Journey.delete_all
   end
 
-  it "recovers a journey by reattempting it" do
+  test "recovers a journey by reattempting it" do
     stuck_journey_class = create_journey_subclass do
       step :first do
       end
@@ -24,12 +24,12 @@ class RecoveryTest < ActiveSupport::TestCase
     journey = stuck_journey_class.create!
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("second")
+    assert_equal "second", journey.next_step_name
 
     travel_to Time.now + 5.days
 
-    expect(stuck_journey_class.when_stuck).to eq(:reattempt)
-    expect(journey.when_stuck).to eq(:reattempt)
+    assert_equal :reattempt, stuck_journey_class.when_stuck
+    assert_equal :reattempt, journey.when_stuck
 
     # Hang the journey in "performing"
     stuck_fiber = Fiber.new do
@@ -37,26 +37,26 @@ class RecoveryTest < ActiveSupport::TestCase
     end
     stuck_fiber.resume
 
-    expect(journey).to be_persisted
-    expect(journey).to be_performing
-    expect(journey.updated_at).to eq(Time.now)
+    assert journey.persisted?
+    assert journey.performing?
+    assert_equal Time.now, journey.updated_at
 
-    expect(StepperMotor::Journey.stuck(1.days.ago)).not_to include(journey)
+    assert_not_includes StepperMotor::Journey.stuck(1.days.ago), journey
 
     travel_to Time.now + 2.days
-    expect(StepperMotor::Journey.stuck(2.days.ago)).to include(journey)
+    assert_includes StepperMotor::Journey.stuck(2.days.ago), journey
 
     perform_at_before_recovery = journey.next_step_to_be_performed_at
-    expect {
+    assert_nothing_raised do
       journey.reload.recover!
-    }.not_to raise_error
+    end
 
     journey.reload
-    expect(journey.next_step_to_be_performed_at).to eq(perform_at_before_recovery)
-    expect(journey.next_step_name).to eq("second")
+    assert_equal perform_at_before_recovery, journey.next_step_to_be_performed_at
+    assert_equal "second", journey.next_step_name
   end
 
-  it "recovers a journey by canceling it" do
+  test "recovers a journey by canceling it" do
     stuck_journey_class = create_journey_subclass do
       self.when_stuck = :cancel
 
@@ -75,12 +75,12 @@ class RecoveryTest < ActiveSupport::TestCase
     journey = stuck_journey_class.create!
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("second")
+    assert_equal "second", journey.next_step_name
 
     travel_to Time.now + 5.days
 
-    expect(stuck_journey_class.when_stuck).to eq(:cancel)
-    expect(journey.when_stuck).to eq(:cancel)
+    assert_equal :cancel, stuck_journey_class.when_stuck
+    assert_equal :cancel, journey.when_stuck
 
     # Hang the journey in "performing"
     stuck_fiber = Fiber.new do
@@ -88,18 +88,18 @@ class RecoveryTest < ActiveSupport::TestCase
     end
     stuck_fiber.resume
 
-    expect(journey).to be_persisted
-    expect(journey).to be_performing
-    expect(journey.updated_at).to eq(Time.now)
+    assert journey.persisted?
+    assert journey.performing?
+    assert_equal Time.now, journey.updated_at
 
     travel_to Time.now + 2.days
-    expect(StepperMotor::Journey.stuck(2.days.ago)).to include(journey)
+    assert_includes StepperMotor::Journey.stuck(2.days.ago), journey
 
-    expect {
+    assert_nothing_raised do
       journey.reload.recover!
-    }.not_to raise_error
+    end
 
     journey.reload
-    expect(journey).to be_canceled
+    assert journey.canceled?
   end
 end
