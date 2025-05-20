@@ -22,8 +22,7 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir.chdir(__dir__) do
     `git ls-files -z`.split("\x0").reject do |f|
-      (File.expand_path(f) == __FILE__) ||
-        f.start_with?(*%w[.git .github .circleci appveyor Gemfile])
+      File.basename(f).start_with?(".")
     end
   end
 
@@ -45,6 +44,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "standard"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "yard"
-  # redcarpet is needed for the yard gem to enable Github Flavored Markdown
-  spec.add_development_dependency "redcarpet"
+  spec.add_development_dependency "redcarpet" # needed for the yard gem to enable Github Flavored Markdown
+  spec.add_development_dependency "sord"
 end

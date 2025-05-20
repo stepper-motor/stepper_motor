@@ -1,7 +1,8 @@
+# typed: strong
 # StepperMotor is a module for building multi-step flows where steps are sequential and only
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
-  VERSION: untyped
+  VERSION = T.let("0.1.7", T.untyped)
 
   class Error < StandardError
   end
@@ -19,23 +20,35 @@ module StepperMotor
     # sord omit - no YARD type given for "name:", using untyped
     # sord omit - no YARD type given for "seq:", using untyped
     # sord omit - no YARD type given for "wait:", using untyped
-    def initialize: (name: untyped, seq: untyped, ?wait: untyped) -> void
+    sig do
+      params(
+        name: T.untyped,
+        seq: T.untyped,
+        wait: T.untyped,
+        step_block: T.untyped
+      ).void
+    end
+    def initialize(name:, seq:, wait: 0, &step_block); end
 
     # sord omit - no YARD return type given, using untyped
     # Makes the Step object itself callable
-    def to_proc: () -> untyped
+    sig { returns(T.untyped) }
+    def to_proc; end
 
     # sord omit - no YARD type given for :name, using untyped
     # Returns the value of attribute name.
-    attr_reader name: untyped
+    sig { returns(T.untyped) }
+    attr_reader :name
 
     # sord omit - no YARD type given for :wait, using untyped
     # Returns the value of attribute wait.
-    attr_reader wait: untyped
+    sig { returns(T.untyped) }
+    attr_reader :wait
 
     # sord omit - no YARD type given for :seq, using untyped
     # Returns the value of attribute seq.
-    attr_reader seq: untyped
+    sig { returns(T.untyped) }
+    attr_reader :seq
   end
 
   # A Journey is the main building block of StepperMotor. You create a journey to guide a particular model
@@ -71,16 +84,18 @@ module StepperMotor
   # 
   # To stop the journey forcibly, delete it from your database - or call `cancel!` within any of the steps.
   class Journey < ActiveRecord::Base
-    STATES: untyped
+    STATES = T.let(%w[ready performing canceled finished], T.untyped)
 
     # sord omit - no YARD return type given, using untyped
     # Alias for the class attribute, for brevity
     # 
     # _@see_ `Journey.step_definitions`
-    def step_definitions: () -> untyped
+    sig { returns(T.untyped) }
+    def step_definitions; end
 
     # sord omit - no YARD return type given, using untyped
-    def recover!: () -> untyped
+    sig { returns(T.untyped) }
+    def recover!; end
 
     # sord omit - no YARD type given for "name", using untyped
     # sord omit - no YARD type given for "wait:", using untyped
@@ -88,21 +103,31 @@ module StepperMotor
     # sord omit - no YARD return type given, using untyped
     # Defines a step in the journey.
     # Steps are stacked top to bottom and get performed in sequence.
-    def self.step: (?untyped name, ?wait: untyped, ?after: untyped) -> untyped
+    sig do
+      params(
+        name: T.untyped,
+        wait: T.untyped,
+        after: T.untyped,
+        blk: T.untyped
+      ).returns(T.untyped)
+    end
+    def self.step(name = nil, wait: nil, after: nil, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
     # be useful in other contexts.
     # 
     # _@param_ `by_step_name` — the name of the step to find
-    def self.lookup_step_definition: ((Symbol | String) by_step_name) -> SORD_ERROR_StepperMotorStep
+    sig { params(by_step_name: T.any(Symbol, String)).returns(SORD_ERROR_StepperMotorStep) }
+    def self.lookup_step_definition(by_step_name); end
 
     # sord omit - no YARD type given for "by_step_name", using untyped
     # sord omit - no YARD return type given, using untyped
     # Alias for the class method, for brevity
     # 
     # _@see_ `Journey.lookup_step_definition`
-    def lookup_step_definition: (untyped by_step_name) -> untyped
+    sig { params(by_step_name: T.untyped).returns(T.untyped) }
+    def lookup_step_definition(by_step_name); end
 
     # sord omit - no YARD return type given, using untyped
     # Is a convenient way to end a hero's journey. Imagine you enter a step where you are inviting a user
@@ -110,7 +135,8 @@ module StepperMotor
     # can therefore cancel their journey. Canceling bails you out of the `step`-defined block and sets the journey record to the `canceled` state.
     # 
     # Calling `cancel!` will abort the execution of the current step.
-    def cancel!: () -> untyped
+    sig { returns(T.untyped) }
+    def cancel!; end
 
     # sord omit - no YARD type given for "wait:", using untyped
     # sord omit - no YARD return type given, using untyped
@@ -119,7 +145,8 @@ module StepperMotor
     # Reattempting will resume the step from the beginning, so the step should be idempotent.
     # 
     # Calling `reattempt!` will abort the execution of the current step.
-    def reattempt!: (?wait: untyped) -> untyped
+    sig { params(wait: T.untyped).returns(T.untyped) }
+    def reattempt!(wait: nil); end
 
     # Performs the next step in the journey. Will check whether any other process has performed the step already
     # and whether the record is unchanged, and will then lock it and set the state to 'performimg'.
@@ -127,35 +154,44 @@ module StepperMotor
     # After setting the state, it will determine the next step to perform, and perform it. Depending on the outcome of
     # the step another `PerformStepJob` may get enqueued. If the journey ends here, the journey record will set its state
     # to 'finished'.
-    def perform_next_step!: () -> void
+    sig { void }
+    def perform_next_step!; end
 
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
-    def time_remaining_until_final_step: () -> ActiveSupport::Duration
+    sig { returns(ActiveSupport::Duration) }
+    def time_remaining_until_final_step; end
 
     # sord omit - no YARD type given for "next_step_definition", using untyped
     # sord omit - no YARD return type given, using untyped
-    def set_next_step_and_enqueue: (untyped next_step_definition) -> untyped
+    sig { params(next_step_definition: T.untyped).returns(T.untyped) }
+    def set_next_step_and_enqueue(next_step_definition); end
 
     # sord omit - no YARD return type given, using untyped
-    def logger: () -> untyped
-
-    # sord omit - no YARD type given for "step_name", using untyped
-    # sord omit - no YARD return type given, using untyped
-    def after_locking_for_step: (untyped step_name) -> untyped
+    sig { returns(T.untyped) }
+    def logger; end
 
     # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
-    def before_step_starts: (untyped step_name) -> untyped
+    sig { params(step_name: T.untyped).returns(T.untyped) }
+    def after_locking_for_step(step_name); end
 
     # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
-    def after_step_completes: (untyped step_name) -> untyped
+    sig { params(step_name: T.untyped).returns(T.untyped) }
+    def before_step_starts(step_name); end
+
+    # sord omit - no YARD type given for "step_name", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(step_name: T.untyped).returns(T.untyped) }
+    def after_step_completes(step_name); end
 
     # sord omit - no YARD return type given, using untyped
-    def schedule!: () -> untyped
+    sig { returns(T.untyped) }
+    def schedule!; end
 
     # sord omit - no YARD return type given, using untyped
-    def to_global_id: () -> untyped
+    sig { returns(T.untyped) }
+    def to_global_id; end
   end
 
   class Railtie < Rails::Railtie
@@ -171,7 +207,8 @@ module StepperMotor
     # _@param_ `journey` — the journey to speedrun
     # 
     # _@return_ — void
-    def speedrun_journey: (StepperMotor::Journey journey) -> untyped
+    sig { params(journey: StepperMotor::Journey).returns(T.untyped) }
+    def speedrun_journey(journey); end
 
     # Performs the named step of the journey without waiting for the time to perform the step.
     # 
@@ -180,7 +217,8 @@ module StepperMotor
     # _@param_ `step_name` — the name of the step to run
     # 
     # _@return_ — void
-    def immediately_perform_single_step: (StepperMotor::Journey journey, Symbol step_name) -> untyped
+    sig { params(journey: StepperMotor::Journey, step_name: Symbol).returns(T.untyped) }
+    def immediately_perform_single_step(journey, step_name); end
   end
 
   # The generator is used to install StepperMotor. It adds an example Journey, a configing
@@ -188,19 +226,26 @@ module StepperMotor
   # Run it with `bin/rails g stepper_motor:install` in your console.
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
-    UUID_MESSAGE: untyped
+    UUID_MESSAGE = T.let(<<~MSG, T.untyped)
+  If set, uuid type will be used for hero_id. Use this
+  if most of your models use UUD as primary key"
+MSG
 
     # sord omit - no YARD return type given, using untyped
     # Generates monolithic migration file that contains all database changes.
-    def create_migration_file: () -> untyped
+    sig { returns(T.untyped) }
+    def create_migration_file; end
 
     # sord omit - no YARD return type given, using untyped
-    def create_initializer: () -> untyped
+    sig { returns(T.untyped) }
+    def create_initializer; end
 
-    def uuid_fk?: () -> bool
+    sig { returns(T::Boolean) }
+    def uuid_fk?; end
 
     # sord omit - no YARD return type given, using untyped
-    def migration_version: () -> untyped
+    sig { returns(T.untyped) }
+    def migration_version; end
   end
 
   # The cyclic scheduler is designed to be run regularly via a cron job. On every
@@ -231,27 +276,32 @@ module StepperMotor
     # cycle, the fewer jobs are going to be created per cycle.
     # 
     # _@param_ `cycle_duration` — how frequently the scheduler runs
-    def initialize: (cycle_duration: ActiveSupport::Duration) -> void
+    sig { params(cycle_duration: ActiveSupport::Duration).void }
+    def initialize(cycle_duration:); end
 
     # Run a scheduling cycle. This should be called from your ActiveJob that runs on a regular Cron cadence. Ideally you
     # would call the instance of the scheduler configured for the whole StepperMotor (so that the `cycle_duration` gets
     # correctly applied, as it is necessary to pick the journeys to step). Normally, you would do this:
-    def run_scheduling_cycle: () -> void
+    sig { void }
+    def run_scheduling_cycle; end
 
     # sord omit - no YARD type given for "journey", using untyped
     # sord omit - no YARD return type given, using untyped
-    def schedule: (untyped journey) -> untyped
+    sig { params(journey: T.untyped).returns(T.untyped) }
+    def schedule(journey); end
 
     class RunSchedulingCycleJob < ActiveJob::Base
       # sord omit - no YARD return type given, using untyped
-      def perform: () -> untyped
+      sig { returns(T.untyped) }
+      def perform; end
     end
   end
 
   class PerformStepJob < ActiveJob::Base
     # sord omit - no YARD type given for "journey_gid", using untyped
     # sord omit - no YARD return type given, using untyped
-    def perform: (untyped journey_gid) -> untyped
+    sig { params(journey_gid: T.untyped).returns(T.untyped) }
+    def perform(journey_gid); end
   end
 
   # The forward scheduler enqueues a job for every Journey that
@@ -274,14 +324,16 @@ module StepperMotor
   class ForwardScheduler
     # sord omit - no YARD type given for "journey", using untyped
     # sord omit - no YARD return type given, using untyped
-    def schedule: (untyped journey) -> untyped
+    sig { params(journey: T.untyped).returns(T.untyped) }
+    def schedule(journey); end
   end
 
   class PerformStepJobV2 < ActiveJob::Base
     # sord omit - no YARD type given for "journey_id:", using untyped
     # sord omit - no YARD type given for "journey_class_name:", using untyped
     # sord omit - no YARD return type given, using untyped
-    def perform: (journey_id: untyped, journey_class_name: untyped) -> untyped
+    sig { params(journey_id: T.untyped, journey_class_name: T.untyped).returns(T.untyped) }
+    def perform(journey_id:, journey_class_name:); end
   end
 
   # The purpose of this job is to find journeys which have, for whatever reason, remained in the
@@ -291,6 +343,7 @@ module StepperMotor
   class RecoverStuckJourneysJobV1 < ActiveJob::Base
     # sord omit - no YARD type given for "stuck_for:", using untyped
     # sord omit - no YARD return type given, using untyped
-    def perform: (?stuck_for: untyped) -> untyped
+    sig { params(stuck_for: T.untyped).returns(T.untyped) }
+    def perform(stuck_for: 2.days); end
   end
 end
