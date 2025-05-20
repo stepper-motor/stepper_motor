@@ -397,4 +397,3 @@ class JourneyTest < ActiveSupport::TestCase
     expect(model.state).to be_in(["canceled", "finished"])
   end
 end
-# rubocop:enable Lint/ConstantDefinitionInBlock
