@@ -7,7 +7,7 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     StepperMotor::Journey.delete_all
   end
 
-  it "handles recovery from a background job" do
+  test "handles recovery from a background job" do
     stuck_journey_class1 = create_journey_subclass do
       self.when_stuck = :cancel
 
@@ -49,21 +49,21 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
       journey_to_reattempt.perform_next_step!
     end.resume
 
-    expect(journey_to_cancel.reload).to be_performing
-    expect(journey_to_reattempt.reload).to be_performing
+    assert journey_to_cancel.reload.performing?
+    assert journey_to_reattempt.reload.performing?
 
     StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
-    expect(journey_to_cancel.reload).to be_performing
-    expect(journey_to_reattempt.reload).to be_performing
+    assert journey_to_cancel.reload.performing?
+    assert journey_to_reattempt.reload.performing?
 
     travel_to Time.now + 2.days + 1.second
     StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
 
-    expect(journey_to_cancel.reload).to be_canceled
-    expect(journey_to_reattempt.reload).to be_ready
+    assert journey_to_cancel.reload.canceled?
+    assert journey_to_reattempt.reload.ready?
   end
 
-  it "does not raise when the class of the journey is no longer present" do
+  test "does not raise when the class of the journey is no longer present" do
     stuck_journey_class1 = create_journey_subclass do
       self.when_stuck = :cancel
 
@@ -78,12 +78,12 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     Fiber.new do
       journey_to_cancel.perform_next_step!
     end.resume
-    expect(journey_to_cancel.reload).to be_performing
+    assert journey_to_cancel.reload.performing?
 
     journey_to_cancel.class.update_all(type: "UnknownJourneySubclass")
 
-    expect {
+    assert_nothing_raised do
       StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
-    }.not_to raise_error
+    end
   end
 end

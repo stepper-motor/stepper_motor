@@ -5,12 +5,6 @@ class TestHelperTest < ActiveSupport::TestCase
   include SideEffects::TestHelper
   include StepperMotor::TestHelper
 
-  setup do
-    #establish_test_connection
-    #run_generator
-    #run_migrations
-  end
-
   def speedy_journey_class
     create_journey_subclass do
       step :step_1, wait: 40.minutes do
@@ -27,21 +21,23 @@ class TestHelperTest < ActiveSupport::TestCase
     end
   end
 
-  it "speedruns the journey despite waits being configured" do
+  test "speedruns the journey despite waits being configured" do
     journey = speedy_journey_class.create!
-    expect(journey).to be_ready
+    assert journey.ready?
 
-    expect {
-      speedrun_journey(journey)
-    }.to have_produced_side_effects_named("step_1", "step_2", "step_3")
+    SideEffects.clear!
+    speedrun_journey(journey)
+    assert SideEffects.produced?("step_1")
+    assert SideEffects.produced?("step_2")
+    assert SideEffects.produced?("step_3")
   end
 
-  it "is able to perform a single step forcibly" do
+  test "is able to perform a single step forcibly" do
     journey = speedy_journey_class.create!
-    expect(journey).to be_ready
+    assert journey.ready?
 
-    expect {
-      immediately_perform_single_step(journey, :step_2)
-    }.to have_produced_side_effects_named("step_2")
+    SideEffects.clear!
+    immediately_perform_single_step(journey, :step_2)
+    assert SideEffects.produced?("step_2")
   end
 end
