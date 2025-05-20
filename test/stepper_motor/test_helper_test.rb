@@ -2,7 +2,7 @@
 require "test_helper"
 
 class TestHelperTest < ActiveSupport::TestCase
-  include SideEffects::SpecHelper
+  include SideEffects::TestHelper
   include StepperMotor::TestHelper
 
   setup do

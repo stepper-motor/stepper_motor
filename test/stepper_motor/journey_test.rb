@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "../spec_helper"
+require "test_helper"
 
-# rubocop:disable Lint/ConstantDefinitionInBlock
-RSpec.describe "StepperMotor::Journey" do
+class JourneyTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
   it "allows an empty journey to be defined and performed to completion" do
