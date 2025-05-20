@@ -2,6 +2,11 @@
 
 module SideEffects
   module TestHelper
+    def setup
+      SideEffects.clear!
+      super
+    end
+
     def teardown
       SideEffects.clear!
       super

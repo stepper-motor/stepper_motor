@@ -4,15 +4,16 @@ require "test_helper"
 
 class JourneyTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include SideEffects::TestHelper
 
-  it "allows an empty journey to be defined and performed to completion" do
+  test "allows an empty journey to be defined and performed to completion" do
     pointless_class = create_journey_subclass
     journey = pointless_class.create!
     journey.perform_next_step!
-    expect(journey).to be_finished
+    assert journey.finished?
   end
 
-  it "allows a journey consisting of one step to be defined and performed to completion" do
+  test "allows a journey consisting of one step to be defined and performed to completion" do
     single_step_class = create_journey_subclass do
       step :do_thing do
         SideEffects.touch!("do_thing")
@@ -20,13 +21,13 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = single_step_class.create!
-    expect(journey.next_step_to_be_performed_at).not_to be_nil
+    assert_not_nil journey.next_step_to_be_performed_at
     journey.perform_next_step!
-    expect(journey).to be_finished
-    expect(SideEffects).to be_produced("do_thing")
+    assert journey.finished?
+    assert SideEffects.produced?("do_thing")
   end
 
-  it "allows a journey consisting of multiple named steps to be defined and performed to completion" do
+  test "allows a journey consisting of multiple named steps to be defined and performed to completion" do
     multi_step_journey_class = create_journey_subclass do
       [:step1, :step2, :step3].each do |step_name|
         step step_name do
@@ -36,27 +37,27 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = multi_step_journey_class.create!
-    expect(journey.next_step_name).to eq("step1")
+    assert_equal "step1", journey.next_step_name
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("step2")
-    expect(journey.previous_step_name).to eq("step1")
+    assert_equal "step2", journey.next_step_name
+    assert_equal "step1", journey.previous_step_name
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("step3")
-    expect(journey.previous_step_name).to eq("step2")
+    assert_equal "step3", journey.next_step_name
+    assert_equal "step2", journey.previous_step_name
 
     journey.perform_next_step!
-    expect(journey).to be_finished
-    expect(journey.next_step_name).to be_nil
-    expect(journey.previous_step_name).to eq("step3")
+    assert journey.finished?
+    assert_nil journey.next_step_name
+    assert_equal "step3", journey.previous_step_name
 
-    expect(SideEffects).to be_produced("from_step1")
-    expect(SideEffects).to be_produced("from_step2")
-    expect(SideEffects).to be_produced("from_step3")
+    assert SideEffects.produced?("from_step1")
+    assert SideEffects.produced?("from_step2")
+    assert SideEffects.produced?("from_step3")
   end
 
-  it "allows a journey consisting of multiple anonymous steps to be defined and performed to completion" do
+  test "allows a journey consisting of multiple anonymous steps to be defined and performed to completion" do
     anonymous_steps_class = create_journey_subclass do
       3.times do |n|
         step do
@@ -66,27 +67,27 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = anonymous_steps_class.create!
-    expect(journey.next_step_name).to eq("step_1")
+    assert_equal "step_1", journey.next_step_name
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("step_2")
-    expect(journey.previous_step_name).to eq("step_1")
+    assert_equal "step_2", journey.next_step_name
+    assert_equal "step_1", journey.previous_step_name
 
     journey.perform_next_step!
-    expect(journey.next_step_name).to eq("step_3")
-    expect(journey.previous_step_name).to eq("step_2")
+    assert_equal "step_3", journey.next_step_name
+    assert_equal "step_2", journey.previous_step_name
 
     journey.perform_next_step!
-    expect(journey).to be_finished
-    expect(journey.next_step_name).to be_nil
-    expect(journey.previous_step_name).to eq("step_3")
+    assert journey.finished?
+    assert_nil journey.next_step_name
+    assert_equal "step_3", journey.previous_step_name
 
-    expect(SideEffects).to be_produced("sidefx_0")
-    expect(SideEffects).to be_produced("sidefx_1")
-    expect(SideEffects).to be_produced("sidefx_2")
+    assert SideEffects.produced?("sidefx_0")
+    assert SideEffects.produced?("sidefx_1")
+    assert SideEffects.produced?("sidefx_2")
   end
 
-  it "allows an arbitrary ActiveRecord to be attached as the hero" do
+  test "allows an arbitrary ActiveRecord to be attached as the hero" do
     carried_journey_class = create_journey_subclass
     carrier_journey_class = create_journey_subclass do
       step :only do
@@ -96,12 +97,12 @@ class JourneyTest < ActiveSupport::TestCase
 
     hero = carried_journey_class.create!
     journey = carrier_journey_class.create!(hero: hero)
-    expect {
+    assert_nothing_raised do
       journey.perform_next_step!
-    }.not_to raise_error
+    end
   end
 
-  it "allows a journey where steps are delayed in time using wait:" do
+  test "allows a journey where steps are delayed in time using wait:" do
     timely_journey_class = create_journey_subclass do
       step wait: 10.hours do
         SideEffects.touch! "after_10_hours.txt"
@@ -119,31 +120,31 @@ class JourneyTest < ActiveSupport::TestCase
     freeze_time
     timely_journey_class.create!
 
-    expect {
+    assert_no_side_effects do
       perform_enqueued_jobs
-    }.to not_have_produced_any_side_effects
+    end
 
     travel 10.hours
-    expect {
+    assert_produced_side_effects "after_10_hours.txt" do
       perform_enqueued_jobs
-    }.to have_produced_side_effects_named("after_10_hours.txt")
+    end
 
     travel 4.minutes
-    expect {
+    assert_no_side_effects do
       perform_enqueued_jobs
-    }.to not_have_produced_any_side_effects
+    end
 
     travel 1.minutes
-    expect {
+    assert_produced_side_effects "after_5_minutes.txt" do
       perform_enqueued_jobs
-    }.to have_produced_side_effects_named("after_5_minutes.txt")
+    end
 
-    expect {
+    assert_produced_side_effects "final_nowait.txt" do
       perform_enqueued_jobs
-    }.to have_produced_side_effects_named("final_nowait.txt")
+    end
   end
 
-  it "allows a journey where steps are delayed in time using after:" do
+  test "allows a journey where steps are delayed in time using after:" do
     journey_class = create_journey_subclass do
       step after: 10.hours do
         SideEffects.touch! "step1"
@@ -161,25 +162,31 @@ class JourneyTest < ActiveSupport::TestCase
     timely_journey = journey_class.create!
     freeze_time
 
-    # Note that the "perform_enqueued_jobs" helper method performs the job even if
-    # its "scheduled_at" lies in the future. Presumably this is done so that testing is
-    # easier to do, but we check the time the journey was set to perform the next step at
-    # - and therefore a job which runs too early will produce another job that replaces it.
-    expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
+    assert_no_side_effects do
+      perform_enqueued_jobs
+    end
 
     travel_to(timely_journey.next_step_to_be_performed_at + 1.second)
-    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step1")
+    assert_produced_side_effects "step1" do
+      perform_enqueued_jobs
+    end
 
     travel(4.minutes)
-    expect { perform_enqueued_jobs }.to not_have_produced_any_side_effects
+    assert_no_side_effects do
+      perform_enqueued_jobs
+    end
 
     travel(1.minutes + 1.second)
-    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step2")
-    expect { perform_enqueued_jobs }.to have_produced_side_effects_named("step3")
-    expect(enqueued_jobs).to be_empty # Journey ended
+    assert_produced_side_effects "step2" do
+      perform_enqueued_jobs
+    end
+    assert_produced_side_effects "step3" do
+      perform_enqueued_jobs
+    end
+    assert_empty enqueued_jobs # Journey ended
   end
 
-  it "tracks steps entered and completed using counters" do
+  test "tracks steps entered and completed using counters" do
     failing = create_journey_subclass do
       step do
         raise "oops"
@@ -193,23 +200,23 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     failing_journey = failing.create!
-    expect { failing_journey.perform_next_step! }.to raise_error(/oops/)
-    expect(failing_journey.steps_entered).to eq(1)
-    expect(failing_journey.steps_completed).to eq(0)
+    assert_raises(RuntimeError) { failing_journey.perform_next_step! }
+    assert_equal 1, failing_journey.steps_entered
+    assert_equal 0, failing_journey.steps_completed
 
     failing_journey.ready!
-    expect { failing_journey.perform_next_step! }.to raise_error(/oops/)
-    expect(failing_journey.steps_entered).to eq(2)
-    expect(failing_journey.steps_completed).to eq(0)
+    assert_raises(RuntimeError) { failing_journey.perform_next_step! }
+    assert_equal 2, failing_journey.steps_entered
+    assert_equal 0, failing_journey.steps_completed
 
     non_failing_journey = not_failing.create!
     non_failing_journey.perform_next_step!
-    expect(non_failing_journey.steps_entered).to eq(1)
-    expect(non_failing_journey.steps_completed).to eq(1)
+    assert_equal 1, non_failing_journey.steps_entered
+    assert_equal 1, non_failing_journey.steps_completed
   end
 
-  it "does not allow invalid values for after: and wait:" do
-    expect {
+  test "does not allow invalid values for after: and wait:" do
+    assert_raises(ArgumentError) do
       create_journey_subclass do
         step after: 10.hours do
           # pass
@@ -219,26 +226,26 @@ class JourneyTest < ActiveSupport::TestCase
           # pass
         end
       end
-    }.to raise_error(ArgumentError)
+    end
 
-    expect {
+    assert_raises(ArgumentError) do
       create_journey_subclass do
         step wait: -5.hours do
           # pass
         end
       end
-    }.to raise_error(ArgumentError)
+    end
 
-    expect {
+    assert_raises(ArgumentError) do
       create_journey_subclass do
         step after: 5.hours, wait: 2.seconds do
           # pass
         end
       end
-    }.to raise_error(ArgumentError)
+    end
   end
 
-  it "allows a step to reattempt itself" do
+  test "allows a step to reattempt itself" do
     deferring = create_journey_subclass do
       step do
         reattempt! wait: 5.minutes
@@ -250,20 +257,20 @@ class JourneyTest < ActiveSupport::TestCase
     perform_enqueued_jobs
 
     journey.reload
-    expect(journey.previous_step_name).to eq("step_1")
-    expect(journey.next_step_name).to eq("step_1")
-    expect(journey.next_step_to_be_performed_at).to be_within(1.second).of(Time.current + 5.minutes)
+    assert_equal "step_1", journey.previous_step_name
+    assert_equal "step_1", journey.next_step_name
+    assert_in_delta Time.current + 5.minutes, journey.next_step_to_be_performed_at, 1.second
 
     travel 5.minutes + 1.second
     perform_enqueued_jobs
 
     journey.reload
-    expect(journey.previous_step_name).to eq("step_1")
-    expect(journey.next_step_name).to eq("step_1")
-    expect(journey.next_step_to_be_performed_at).to be_within(1.second).of(Time.current + 5.minutes)
+    assert_equal "step_1", journey.previous_step_name
+    assert_equal "step_1", journey.next_step_name
+    assert_in_delta Time.current + 5.minutes, journey.next_step_to_be_performed_at, 1.second
   end
 
-  it "allows a journey consisting of multiple steps where the first step bails out to be defined and performed to the point of cancellation" do
+  test "allows a journey consisting of multiple steps where the first step bails out to be defined and performed to the point of cancellation" do
     interrupting = create_journey_subclass do
       step :step1 do
         SideEffects.touch!("step1_before_cancel")
@@ -277,15 +284,15 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = interrupting.create!
-    expect(journey.next_step_name).to eq("step1")
+    assert_equal "step1", journey.next_step_name
 
     perform_enqueued_jobs
-    expect(SideEffects).to be_produced("step1_before_cancel")
-    expect(SideEffects).not_to be_produced("step1_after_cancel")
+    assert SideEffects.produced?("step1_before_cancel")
+    assert_not SideEffects.produced?("step1_after_cancel")
     assert_canceled_or_finished(journey)
   end
 
-  it "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
+  test "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
     actor_class = create_journey_subclass
     hero = actor_class.create!
 
@@ -295,21 +302,21 @@ class JourneyTest < ActiveSupport::TestCase
       end
     end
 
-    expect {
+    assert_nothing_raised do
       2.times { exclusive_journey_class.create! }
-    }.not_to raise_error
+    end
 
-    expect {
+    assert_raises(ActiveRecord::RecordNotUnique) do
       2.times { exclusive_journey_class.create!(hero: hero) }
-    }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
 
-    expect {
+    assert_nothing_raised do
       2.times { exclusive_journey_class.create!(hero: hero, allow_multiple: true) }
-    }.not_to raise_error
+    end
   end
 
-  it "forbids multiple steps with the same name within a journey" do
-    expect {
+  test "forbids multiple steps with the same name within a journey" do
+    assert_raises(ArgumentError) do
       create_journey_subclass do
         step :foo do
           true
@@ -319,10 +326,10 @@ class JourneyTest < ActiveSupport::TestCase
           true
         end
       end
-    }.to raise_error(ArgumentError)
+    end
   end
 
-  it "finishes the journey after perform_next_step" do
+  test "finishes the journey after perform_next_step" do
     rapid = create_journey_subclass do
       step :one do
         true # no-op
@@ -333,33 +340,35 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = rapid.create!
-    expect(journey).to be_ready
+    assert journey.ready?
     journey.perform_next_step!
-    expect(journey).to be_ready
+    assert journey.ready?
     journey.perform_next_step!
-    expect(journey).to be_finished
+    assert journey.finished?
   end
 
-  it "does not enter next step on a finished journey" do
+  test "does not enter next step on a finished journey" do
     near_instant = create_journey_subclass do
       step :one do
         finished!
       end
 
       step :two do
-        raise "Should never be reache"
+        raise "Should never be reached"
       end
     end
 
     journey = near_instant.create!
-    expect(journey).to be_ready
+    assert journey.ready?
     journey.perform_next_step!
-    expect(journey).to be_finished
+    assert journey.finished?
 
-    expect { journey.perform_next_step! }.not_to raise_error
+    assert_nothing_raised do
+      journey.perform_next_step!
+    end
   end
 
-  it "raises an exception if a step changes the journey but does not save it" do
+  test "raises an exception if a step changes the journey but does not save it" do
     mutating = create_journey_subclass do
       step :one do
         self.state = "canceled"
@@ -367,12 +376,12 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = mutating.create!
-    expect {
+    assert_raises(StepperMotor::JourneyNotPersisted) do
       journey.perform_next_step!
-    }.to raise_error(StepperMotor::JourneyNotPersisted)
+    end
   end
 
-  it "resets the instance variables after performing a step" do
+  test "resets the instance variables after performing a step" do
     self_resetting = create_journey_subclass do
       step :one do
         raise unless @current_step_definition
@@ -384,16 +393,27 @@ class JourneyTest < ActiveSupport::TestCase
     end
 
     journey = self_resetting.create!
-    expect { journey.perform_next_step! }.not_to raise_error
-    expect(journey.instance_variable_get(:@current_step_definition)).to be_nil
+    assert_nothing_raised do
+      journey.perform_next_step!
+    end
+    assert_nil journey.instance_variable_get(:@current_step_definition)
 
-    expect { journey.perform_next_step! }.not_to raise_error
-    expect(journey.instance_variable_get(:@current_step_definition)).to be_nil
-    expect(journey.instance_variable_get(:@reattempt_after)).to be_nil
+    assert_nothing_raised do
+      journey.perform_next_step!
+    end
+    assert_nil journey.instance_variable_get(:@current_step_definition)
+    assert_nil journey.instance_variable_get(:@reattempt_after)
   end
+
+  private
 
   def assert_canceled_or_finished(model)
     model.reload
-    expect(model.state).to be_in(["canceled", "finished"])
+    assert_includes ["canceled", "finished"], model.state
+  end
+
+  def assert_produced_side_effects(name)
+    yield
+    assert SideEffects.produced?(name)
   end
 end
