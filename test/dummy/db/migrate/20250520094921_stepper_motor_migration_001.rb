@@ -1,14 +1,12 @@
 class StepperMotorMigration001 < ActiveRecord::Migration[7.2]
   def change
-    
     create_table :stepper_motor_journeys do |t|
-    
       t.string :type, null: false, index: true
       t.string :state, default: "ready"
       t.string :hero_type, null: true
-      
+
       t.bigint :hero_id
-      
+
       t.boolean :allow_multiple, default: false
       t.string :previous_step_name
       t.string :next_step_name
