@@ -6,9 +6,9 @@ class TestHelperTest < ActiveSupport::TestCase
   include StepperMotor::TestHelper
 
   setup do
-    establish_test_connection
-    run_generator
-    run_migrations
+    #establish_test_connection
+    #run_generator
+    #run_migrations
   end
 
   def speedy_journey_class

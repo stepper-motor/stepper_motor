@@ -29,7 +29,7 @@ end
 module Despec
   def it(desc)
     test(desc) do
-      skip "Not ported yet"
+      flunk "To rewrite: #{desc}"
     end
   end
 end
