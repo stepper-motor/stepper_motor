@@ -20,47 +20,56 @@ class CyclicSchedulerTest < ActiveSupport::TestCase
     end
   end
 
-  it "does not schedule a journey which is too far in the future" do
+  test "does not schedule a journey which is too far in the future" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 30.seconds)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
-    _journey = far_future_journey_class.create!
+    assert_no_enqueued_jobs do
+      far_future_journey_class.create!
+    end
 
-    expect(scheduler).not_to receive(:schedule)
-    scheduler.run_scheduling_cycle
+    assert_no_enqueued_jobs do
+      scheduler.run_scheduling_cycle
+    end
   end
 
-  it "only schedules journeys which are within its execution window" do
+  test "for a job inside the current scheduling cycle, enqueues the job immediately" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 40.minutes)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
-    journey = far_future_journey_class.create!
-
-    expect(scheduler).to receive(:schedule).with(journey).and_call_original
-    scheduler.run_scheduling_cycle
+    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJobV2 do
+      far_future_journey_class.create!
+    end
   end
 
-  it "also schedules journeys which had to run in the past" do
+  test "also schedules journeys which had to run in the past" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 10.seconds)
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
-    journey = far_future_journey_class.create!
+    journey = nil
+    assert_no_enqueued_jobs do
+      journey = far_future_journey_class.create!
+    end
     journey.update!(next_step_to_be_performed_at: 10.minutes.ago)
 
-    expect(scheduler).to receive(:schedule).with(journey).and_call_original
-    scheduler.run_scheduling_cycle
+    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJobV2 do
+      scheduler.run_scheduling_cycle
+    end
   end
 
-  it "performs the scheduling job" do
+  test "performs the scheduling job without raising exceptions even if the cycling scheduler is not the one active" do
+    StepperMotor.scheduler = StepperMotor::ForwardScheduler.new
+    assert_nothing_raised do
+      StepperMotor::CyclicScheduler::RunSchedulingCycleJob.new.perform
+    end
+  end
+
+  test "performs the scheduling job without raising exceptions if the cycling scheduler is the active" do
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 10.seconds)
     StepperMotor.scheduler = scheduler
-    job_class = StepperMotor::CyclicScheduler::RunSchedulingCycleJob
-    expect(scheduler).to receive(:run_scheduling_cycle).and_call_original
-    job_class.perform_now
-  end
 
-  it "does not perform the job if the configured scheduler is not the CyclicScheduler"
+    assert_nothing_raised do
+      StepperMotor::CyclicScheduler::RunSchedulingCycleJob.new.perform
+    end
+  end
 end
