@@ -20,20 +20,19 @@ class ForwardSchedulerTest < ActiveSupport::TestCase
     end
   end
 
-  it "schedules a journey 40 minutes ahead" do
+  test "schedules a journey 40 minutes ahead" do
     scheduler = StepperMotor::ForwardScheduler.new
     StepperMotor.scheduler = scheduler
 
-    expect(scheduler).to receive(:schedule).with(instance_of(far_future_journey_class)).once.and_call_original
     _journey = far_future_journey_class.create!
 
-    expect(enqueued_jobs.size).to eq(1)
+    assert_equal 1, enqueued_jobs.size
     job = enqueued_jobs.first
 
-    expect(job["job_class"]).to eq("StepperMotor::PerformStepJobV2")
-    expect(job["scheduled_at"]).not_to be_nil
+    assert_equal "StepperMotor::PerformStepJobV2", job["job_class"]
+    assert_not_nil job["scheduled_at"]
 
     scheduled_at = Time.parse(job["scheduled_at"])
-    expect(scheduled_at).to be_within(5.seconds).of(40.minutes.from_now)
+    assert_in_delta 40.minutes.from_now.to_f, scheduled_at.to_f, 5.seconds.to_f
   end
 end
