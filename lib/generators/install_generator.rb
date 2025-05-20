@@ -8,10 +8,15 @@ module StepperMotor
   # initializer and the migration that creates tables.
   # Run it with `bin/rails g stepper_motor:install` in your console.
   class InstallGenerator < Rails::Generators::Base
+    UUID_MESSAGE = <<~MSG
+      If set, uuid type will be used for hero_id. Use this
+      if most of your models use UUD as primary key"
+    MSG
+
     include ActiveRecord::Generators::Migration
 
     source_paths << File.join(File.dirname(__FILE__, 2))
-    class_option :uuid, type: :boolean, desc: "The foreign key type to use for hero_id. Can be either bigint or uuid"
+    class_option :uuid, type: :boolean, desc: UUID_MESSAGE
 
     # Generates monolithic migration file that contains all database changes.
     def create_migration_file
