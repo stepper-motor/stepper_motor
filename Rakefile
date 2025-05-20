@@ -1,7 +1,5 @@
-# frozen_string_literal: true
-
+require "bundler/setup"
 require "bundler/gem_tasks"
-require "rspec/core/rake_task"
 require "standard/rake"
 
 task :format do
@@ -9,5 +7,4 @@ task :format do
   `bundle exec magic_frozen_string_literal .`
 end
 
-RSpec::Core::RakeTask.new(:spec)
-task default: %i[spec standard]
+task default: %i[test standard]

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require_relative "../spec_helper"
+require "test_helper"
 
-RSpec.describe "Recovery of stuck journeys" do
-  before do
+class RecoveryTest < ActiveSupport::TestCase
+  setup do
     StepperMotor::Journey.delete_all
   end
 

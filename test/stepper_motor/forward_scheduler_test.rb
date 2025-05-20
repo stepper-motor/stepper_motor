@@ -1,16 +1,14 @@
-# frozen_string_literal: true
+require "test_helper"
 
-require_relative "../spec_helper"
-
-RSpec.describe "StepperMotor::ForwardScheduler" do
+class ForwardSchedulerTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  before do
+  setup do
     @previous_scheduler = StepperMotor.scheduler
     StepperMotor::Journey.delete_all
   end
 
-  after do
+  teardown do
     StepperMotor.scheduler = @previous_scheduler
   end
 

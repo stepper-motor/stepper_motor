@@ -1,12 +1,11 @@
 # frozen_string_literal: true
+require "test_helper"
 
-require_relative "../spec_helper"
-
-RSpec.describe "StepperMotor::TestHelper" do
+class TestHelperTest < ActiveSupport::TestCase
   include SideEffects::SpecHelper
   include StepperMotor::TestHelper
 
-  before do
+  setup do
     establish_test_connection
     run_generator
     run_migrations
