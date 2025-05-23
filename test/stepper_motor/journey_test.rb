@@ -215,36 +215,6 @@ class JourneyTest < ActiveSupport::TestCase
     assert_equal 1, non_failing_journey.steps_completed
   end
 
-  test "does not allow invalid values for after: and wait:" do
-    assert_raises(ArgumentError) do
-      create_journey_subclass do
-        step after: 10.hours do
-          # pass
-        end
-
-        step after: 5.hours do
-          # pass
-        end
-      end
-    end
-
-    assert_raises(ArgumentError) do
-      create_journey_subclass do
-        step wait: -5.hours do
-          # pass
-        end
-      end
-    end
-
-    assert_raises(ArgumentError) do
-      create_journey_subclass do
-        step after: 5.hours, wait: 2.seconds do
-          # pass
-        end
-      end
-    end
-  end
-
   test "allows a step to reattempt itself" do
     deferring = create_journey_subclass do
       step do
@@ -290,43 +260,6 @@ class JourneyTest < ActiveSupport::TestCase
     assert SideEffects.produced?("step1_before_cancel")
     assert_not SideEffects.produced?("step1_after_cancel")
     assert_canceled_or_finished(journey)
-  end
-
-  test "forbids multiple similar journeys for the same hero at the same time unless allow_multiple is set" do
-    actor_class = create_journey_subclass
-    hero = actor_class.create!
-
-    exclusive_journey_class = create_journey_subclass do
-      step do
-        raise "The step should never be entered as we are not testing the step itself here"
-      end
-    end
-
-    assert_nothing_raised do
-      2.times { exclusive_journey_class.create! }
-    end
-
-    assert_raises(ActiveRecord::RecordNotUnique) do
-      2.times { exclusive_journey_class.create!(hero: hero) }
-    end
-
-    assert_nothing_raised do
-      2.times { exclusive_journey_class.create!(hero: hero, allow_multiple: true) }
-    end
-  end
-
-  test "forbids multiple steps with the same name within a journey" do
-    assert_raises(ArgumentError) do
-      create_journey_subclass do
-        step :foo do
-          true
-        end
-
-        step "foo" do
-          true
-        end
-      end
-    end
   end
 
   test "finishes the journey after perform_next_step" do

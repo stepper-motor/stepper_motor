@@ -84,6 +84,7 @@ module StepperMotor
   # 
   # To stop the journey forcibly, delete it from your database - or call `cancel!` within any of the steps.
   class Journey < ActiveRecord::Base
+    include StepperMotor::Journey::Recovery
     STATES = T.let(%w[ready performing canceled finished], T.untyped)
 
     # sord omit - no YARD return type given, using untyped
@@ -92,10 +93,6 @@ module StepperMotor
     # _@see_ `Journey.step_definitions`
     sig { returns(T.untyped) }
     def step_definitions; end
-
-    # sord omit - no YARD return type given, using untyped
-    sig { returns(T.untyped) }
-    def recover!; end
 
     # sord omit - no YARD type given for "name", using untyped
     # sord omit - no YARD type given for "wait:", using untyped
@@ -154,17 +151,20 @@ module StepperMotor
     # After setting the state, it will determine the next step to perform, and perform it. Depending on the outcome of
     # the step another `PerformStepJob` may get enqueued. If the journey ends here, the journey record will set its state
     # to 'finished'.
-    sig { void }
-    def perform_next_step!; end
+    # 
+    # _@param_ `idempotency_key` — If provided, the step will only be performed if the idempotency key matches the current idempotency key. This ensures that the only the triggering job that was scheduled for this step can trigger the step and not any other.
+    sig { params(idempotency_key: T.nilable(String)).void }
+    def perform_next_step!(idempotency_key: nil); end
 
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     sig { returns(ActiveSupport::Duration) }
     def time_remaining_until_final_step; end
 
     # sord omit - no YARD type given for "next_step_definition", using untyped
+    # sord omit - no YARD type given for "wait:", using untyped
     # sord omit - no YARD return type given, using untyped
-    sig { params(next_step_definition: T.untyped).returns(T.untyped) }
-    def set_next_step_and_enqueue(next_step_definition); end
+    sig { params(next_step_definition: T.untyped, wait: T.untyped).returns(T.untyped) }
+    def set_next_step_and_enqueue(next_step_definition, wait: nil); end
 
     # sord omit - no YARD return type given, using untyped
     sig { returns(T.untyped) }
@@ -191,7 +191,15 @@ module StepperMotor
 
     # sord omit - no YARD return type given, using untyped
     sig { returns(T.untyped) }
-    def to_global_id; end
+    def recover!; end
+
+    module Recovery
+      extend ActiveSupport::Concern
+
+      # sord omit - no YARD return type given, using untyped
+      sig { returns(T.untyped) }
+      def recover!; end
+    end
   end
 
   class Railtie < Rails::Railtie
@@ -331,9 +339,10 @@ MSG
   class PerformStepJobV2 < ActiveJob::Base
     # sord omit - no YARD type given for "journey_id:", using untyped
     # sord omit - no YARD type given for "journey_class_name:", using untyped
+    # sord omit - no YARD type given for "idempotency_key:", using untyped
     # sord omit - no YARD return type given, using untyped
-    sig { params(journey_id: T.untyped, journey_class_name: T.untyped).returns(T.untyped) }
-    def perform(journey_id:, journey_class_name:); end
+    sig { params(journey_id: T.untyped, journey_class_name: T.untyped, idempotency_key: T.untyped).returns(T.untyped) }
+    def perform(journey_id:, journey_class_name:, idempotency_key: nil); end
   end
 
   # The purpose of this job is to find journeys which have, for whatever reason, remained in the
