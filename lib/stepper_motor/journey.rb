@@ -187,7 +187,7 @@ module StepperMotor
       logger.debug { "entering step #{current_step_name}" }
 
       catch(:abort_step) do
-        instance_exec(&@current_step_definition)
+        @current_step_definition.perform_in_context_of(self)
       end
 
       # By the end of the step the Journey must either be untouched or saved
