@@ -7,7 +7,9 @@ require "active_job"
 # any journey that stayed in `performing` for longer than 1 hour has hung. Add this job to your
 # cron table and perform it regularly.
 class StepperMotor::RecoverStuckJourneysJobV1 < ActiveJob::Base
-  def perform(stuck_for: 2.days)
+  DEFAULT_STUCK_FOR = 2.days
+
+  def perform(stuck_for: DEFAULT_STUCK_FOR)
     StepperMotor::Journey.stuck(stuck_for.ago).find_each do |journey|
       journey.recover!
     rescue => e
