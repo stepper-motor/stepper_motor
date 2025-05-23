@@ -83,7 +83,7 @@ module StepperMotor
       step_definition = StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, &blk)
 
       # As per Rails docs: you need to be aware when using class_attribute with mutable structures
-      # as Array or Hash. In such cases, you don’t want to do changes in place. Instead use setters.
+      # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
       # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
       self.step_definitions = step_definitions + [step_definition]
     end
@@ -139,13 +139,18 @@ module StepperMotor
     # the step another `PerformStepJob` may get enqueued. If the journey ends here, the journey record will set its state
     # to 'finished'.
     #
+    # @param idempotency_key [String, nil] If provided, the step will only be performed if the idempotency key matches the current idempotency key.
+    #   This ensures that the only the triggering job that was scheduled for this step can trigger the step and not any other.
     # @return [void]
-    def perform_next_step!
+    def perform_next_step!(idempotency_key: nil)
       # Make sure we can't start running the same step of the same journey twice
       next_step_name_before_locking = next_step_name
       with_lock do
         # Make sure no other worker has snatched this journey and made steps instead of us
         return unless ready? && next_step_name == next_step_name_before_locking
+        # Check idempotency key if both are present
+        return if idempotency_key && idempotency_key != self.idempotency_key
+
         performing!
         after_locking_for_step(next_step_name)
       end
@@ -205,8 +210,7 @@ module StepperMotor
       elsif @reattempt_after
         # The step asked the actions to be attempted at a later time
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
-        update!(previous_step_name: current_step_name, next_step_name: current_step_name, next_step_to_be_performed_at: Time.current + @reattempt_after)
-        schedule!
+        set_next_step_and_enqueue(@current_step_definition, wait: @reattempt_after)
         ready!
       elsif finished?
         logger.info { "was marked finished inside the step" }
@@ -238,9 +242,10 @@ module StepperMotor
       seconds_remaining.seconds # Convert to ActiveSupport::Duration
     end
 
-    def set_next_step_and_enqueue(next_step_definition)
-      wait = next_step_definition.wait
-      update!(previous_step_name: next_step_name, next_step_name: next_step_definition.name, next_step_to_be_performed_at: Time.current + wait)
+    def set_next_step_and_enqueue(next_step_definition, wait: nil)
+      wait ||= next_step_definition.wait
+      next_idempotency_key = SecureRandom.base36(16)
+      update!(previous_step_name: next_step_name, next_step_name: next_step_definition.name, next_step_to_be_performed_at: Time.current + wait, idempotency_key: next_idempotency_key)
       schedule!
     end
 
@@ -266,12 +271,6 @@ module StepperMotor
 
     def schedule!
       StepperMotor.scheduler.schedule(self)
-    end
-
-    def to_global_id
-      # This gets included into ActiveModel during Rails bootstrap,
-      # for now do this manually
-      GlobalID.create(self, app: "stepper-motor")
     end
   end
 end

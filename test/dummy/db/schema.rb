@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 # This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
@@ -12,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_20_094922) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_22_212312) do
   create_table "stepper_motor_journeys", force: :cascade do |t|
     t.string "type", null: false
     t.string "state", default: "ready"
@@ -26,6 +24,7 @@ ActiveRecord::Schema[7.2].define(version: 2025_05_20_094922) do
     t.bigint "steps_completed", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "idempotency_key"
     t.index ["hero_type", "hero_id"], name: "index_stepper_motor_journeys_on_hero_type_and_hero_id"
     t.index ["next_step_to_be_performed_at"], name: "index_stepper_motor_journeys_on_next_step_to_be_performed_at", where: "state = 'ready' /*application='Dummy'*/"
     t.index ["type", "hero_id", "hero_type"], name: "one_per_hero_index", unique: true, where: "allow_multiple = '0' AND state IN ('ready', 'performing') /*application='Dummy'*/"
