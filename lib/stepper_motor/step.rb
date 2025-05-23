@@ -12,8 +12,15 @@ class StepperMotor::Step
     @seq = seq
   end
 
-  # Makes the Step object itself callable
-  def to_proc
-    @step_block
+  def perform_in_context_of(journey)
+    if @step_block
+      journey.instance_exec(&@step_block)
+    elsif journey.respond_to?(name)
+      journey.public_send(name) # TODO: context/params?
+    else
+      raise NoMethodError.new(<<~MSG, name, _args = nil, _private = false, receiver: journey)
+        No block or method to use for step `#{name}' on #{journey.class}
+      MSG
+    end
   end
 end

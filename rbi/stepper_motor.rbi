@@ -30,10 +30,10 @@ module StepperMotor
     end
     def initialize(name:, seq:, wait: 0, &step_block); end
 
+    # sord omit - no YARD type given for "journey", using untyped
     # sord omit - no YARD return type given, using untyped
-    # Makes the Step object itself callable
-    sig { returns(T.untyped) }
-    def to_proc; end
+    sig { params(journey: T.untyped).returns(T.untyped) }
+    def perform_in_context_of(journey); end
 
     # sord omit - no YARD type given for :name, using untyped
     # Returns the value of attribute name.
