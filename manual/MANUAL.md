@@ -369,7 +369,7 @@ step :one do
   # perform some action
 end
 
-step :one_bis_ do
+step :one_bis do
   # some compliance action
 end
 
@@ -385,3 +385,40 @@ So, rules of thumb:
 * When steps are recalled to be performed, they get recalled _by name._
 * When preparing for the next step, _the next step from the current in order of definition_ is going to be used.
 
+## Using instance methods as steps
+
+You can use instance methods as steps by passing their name as a symbol to the `step` method:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :erase_attachments
+  step :erase_emails
+
+  def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
+
+Since a method definition in Ruby returns a Symbol, you can use the return value of the `def` expression
+to define a `step` immediately:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  step def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
