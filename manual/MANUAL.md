@@ -422,3 +422,57 @@ class Erasure < StepperMotor::Journey
   end
 end
 ```
+## Exception handling inside steps
+
+> [!IMPORTANT]
+> Exception handling in steps is in flux, expect API changes.
+
+When performing the step, any exceptions raised from within the step will be stored in a local
+variable to allow the Journey to be released as either `ready`, `finished` or `canceled`. The exception
+will be raised from within an `ensure` block after the persistence has been taken care of.
+
+By default, if an exception is raised inside a step the Journey is going to be canceled. This is done for a number of reasons:
+
+* An endlessly reattempting step can cause load on your infrastructure and will never stop retrying
+* Since at the moment there is no configuration for backoff, such a step is likely to hit rate limits on the external resource it hits
+* It is likely a condition that was not anticipated when the Journey was written, thus a blind reattempt is unwise.
+
+While we may change this in future versions of `stepper_motor`, the current default is thus to `cancel!` the Journey if an unhandled
+error occurs. You can, however, switch it to `reattempt!` a Journey should a particular step raise. This is configured per step:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :initiate_deletion, on_exception: :reattempt! do
+    # ..Do the requisite work
+  end
+end
+```
+
+or, if you know that the correct action is to cancel the journey - specify it explicitly (even though it is the default at the moment)
+
+We recommend handling exceptions you care about explicitly inside your step definitions. This allows for
+more fine-grained error matching and does not disrupt the step execution. If you want to register the
+exceptions you `rescue` inside steps, make use of the `Rails.error.report` [method](https://guides.rubyonrails.org/error_reporting.html#manually-reporting-errors)
+
+```ruby
+class Payment < StepperMotor::Journey
+  step def initiate_payment
+    payment = hero
+    client = PaymentProvider::Client.new
+    client.initiate_payment(idempotency_key: payment.id, amount: payment.amount_cents, recipient: payment.recipient.id)
+  rescue PaymentProvider::ConfigurationError => e
+    payment.failed!
+    Rails.error.report(e)
+    cancel! # Without reconfiguration the payment will never initiate
+  rescue PaymentProvider::RateLimitExceeded => e
+    reattempt! wait: e.retry_after
+  rescue PaymentProvider::Timeout
+    reattempt! wait: rand(0.0..5.0) # Add some jitter
+  rescue PaymentProvider::AccountBlocked
+    paymend.failed!
+    cancel! # Do not even report the error - the account has been closed and will stay closed forever
+  end
+end
+```
+
+This, however, is not always practical - classifying all the errors manually is a pretty daunting task, 

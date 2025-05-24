@@ -46,6 +46,24 @@ class ExceptionHandlingTest < ActiveSupport::TestCase
     assert faulty_journey.canceled?
   end
 
+  test "cancels the journey by default at the failig step" do
+    faulty_journey_class = create_journey_subclass do
+      step do
+        raise CustomEx, "Something went wrong"
+      end
+    end
+
+    faulty_journey = faulty_journey_class.create!
+    assert faulty_journey.ready?
+    faulty_journey.idempotency_key
+
+    assert_raises(CustomEx) { faulty_journey.perform_next_step! }
+
+    assert faulty_journey.persisted?
+    refute faulty_journey.changed?
+    assert faulty_journey.canceled?
+  end
+
   test "is able to get the journey into reattempt even if the step has caused an invalid transaction" do
     # We need to test a situation where a Journey causes a database transaction
     # becoming invalid due to an invalid statement. Since we work with the same database

@@ -7,8 +7,24 @@ class StepperMotor::Step
   class MissingDefinition < NoMethodError
   end
 
-  attr_reader :name, :wait, :seq, :wrap
-  def initialize(name:, seq:, wait: 0, on_exception: :reattempt!, &step_block)
+  # @return [String] the name of the step or method to call on the Journey
+  attr_reader :name
+
+  # @return [Numeric,ActiveSupport::Duration] how long to wait before performing the step
+  attr_reader :wait
+
+  # @private
+  attr_reader :seq
+
+  # Creates a new step definition
+  #
+  # @param name[String,Symbol] the name of the Step
+  # @param wait[Numeric,ActiveSupport::Duration] the amount of time to wait before entering the step
+  # @param on_exception[Symbol] the action to take if an exception occurs when performing the step.
+  #   The possible values are:
+  #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+  #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+  def initialize(name:, seq:, wait: 0, on_exception:, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait
@@ -16,6 +32,8 @@ class StepperMotor::Step
     @on_exception = on_exception # TODO: Validate?
   end
 
+  # Performs the step on the passed Journey, wrapping the step with the required context.
+  #
   # @param journey[StepperMotor::Journey] the journey to perform the step in. If a `step_block`
   #   is passed in, it is going to be executed in the context of the journey using `instance_exec`.
   #   If only the name of the step has been provided, an accordingly named public method on the
