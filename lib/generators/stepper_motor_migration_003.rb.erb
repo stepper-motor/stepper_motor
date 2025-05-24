@@ -2,4 +2,5 @@ class StepperMotorMigration003 < ActiveRecord::Migration[<%= migration_version %
   def change
     add_column :stepper_motor_journeys, :idempotency_key, :string, null: true
   end
-end 
+end
+ 
