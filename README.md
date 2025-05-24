@@ -24,6 +24,8 @@ end
 SignupJourney.create!(hero: current_user)
 ```
 
+Want to know more? Dive into the [manual](file.MANUAL.html) we provide.
+
 ## Installation
 
 Add the gem to the application's Gemfile, and then generate and run the migration
