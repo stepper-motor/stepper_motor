@@ -6,6 +6,23 @@ class StepDefinitionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SideEffects::TestHelper
 
+  test "returns the created step definition" do
+    test_case = self # To pass it into the class_eval of create_journey_subclass
+    create_journey_subclass do
+      step_def1 = step do
+        # noop
+      end
+
+      step_def2 = step :another_step do
+        # noop
+      end
+
+      test_case.assert_kind_of StepperMotor::Step, step_def1
+      test_case.assert_kind_of StepperMotor::Step, step_def2
+      test_case.assert_equal "another_step", step_def2.name
+    end
+  end
+
   test "allows steps to be defined as instance method names" do
     journey_class = create_journey_subclass do
       step :one
