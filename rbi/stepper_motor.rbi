@@ -49,6 +49,14 @@ module StepperMotor
     # Returns the value of attribute seq.
     sig { returns(T.untyped) }
     attr_reader :seq
+
+    # sord omit - no YARD type given for :wrap, using untyped
+    # Returns the value of attribute wrap.
+    sig { returns(T.untyped) }
+    attr_reader :wrap
+
+    class MissingDefinition < NoMethodError
+    end
   end
 
   # A Journey is the main building block of StepperMotor. You create a journey to guide a particular model
@@ -62,17 +70,17 @@ module StepperMotor
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         hero.close_account!
   #       end
@@ -94,21 +102,32 @@ module StepperMotor
     sig { returns(T.untyped) }
     def step_definitions; end
 
-    # sord omit - no YARD type given for "name", using untyped
-    # sord omit - no YARD type given for "wait:", using untyped
-    # sord omit - no YARD type given for "after:", using untyped
-    # sord omit - no YARD return type given, using untyped
+    # sord duck - #to_f looks like a duck type, replacing with untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # sord duck - #to_f looks like a duck type, replacing with untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # Defines a step in the journey.
     # Steps are stacked top to bottom and get performed in sequence.
+    # 
+    # _@param_ `name` — the name of the step. If none is provided, a name will be automatically generated based on the position of the step in the list of `step_definitions`. The name can also be used to call a method on the `Journey` instead of calling the provided block.
+    # 
+    # _@param_ `wait` — the amount of time this step should wait before getting performed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
+    # 
+    # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`
+    # 
+    # _@param_ `step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # 
+    # _@return_ — the step definition that has been created
     sig do
       params(
-        name: T.untyped,
-        wait: T.untyped,
-        after: T.untyped,
+        name: T.nilable(String),
+        wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
+        after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
+        step_definition_options: T.untyped,
         blk: T.untyped
-      ).returns(T.untyped)
+      ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, **step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also

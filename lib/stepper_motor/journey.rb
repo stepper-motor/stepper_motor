@@ -14,17 +14,17 @@ module StepperMotor
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         hero.close_account!
   #       end
@@ -62,13 +62,13 @@ module StepperMotor
     # Defines a step in the journey.
     # Steps are stacked top to bottom and get performed in sequence.
     #
-    # @param name[String?] the name of the step. If none is provided, a name will be automatically generated based
+    # @param name[String,nil] the name of the step. If none is provided, a name will be automatically generated based
     #    on the position of the step in the list of `step_definitions`. The name can also be used to call a method
     #    on the `Journey` instead of calling the provided block.
-    # @param wait[Float, #to_f, ActiveSupport::Duration] the amount of time this step should wait before getting performed.
+    # @param wait[Float,#to_f,ActiveSupport::Duration] the amount of time this step should wait before getting performed.
     #    When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the
     #    `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
-    # @param after[Float, #to_f, ActiveSupport::Duration] the amount of time this step should wait before getting performed
+    # @param after[Float,#to_f,ActiveSupport::Duration] the amount of time this step should wait before getting performed
     #    including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed
     #    to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this
     #    amount of time _minus the `wait` values of the preceding steps, and the
