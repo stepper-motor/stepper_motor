@@ -74,9 +74,9 @@ module StepperMotor
     #    amount of time _minus the `wait` values of the preceding steps, and the
     #    `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait`
     #    value and passed to the step definition. Mutually exclusive with `wait:`
-    # @param step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # @param additional_step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, **step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -95,7 +95,7 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, &blk).tap do |step_definition|
+      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, **additional_step_definition_options, &blk).tap do |step_definition|
         # As per Rails docs: you need to be aware when using class_attribute with mutable structures
         # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
         # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute

@@ -1,10 +1,28 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 class StepDefinitionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SideEffects::TestHelper
+
+  test "passes any additional options to the step definition" do
+    step_def = StepperMotor::Step.new(name: "a_step", seq: 1)
+    assert_extra_arguments = ->(**options) {
+      assert options.key?(:extra)
+      # Return the original definition
+      step_def
+    }
+
+    StepperMotor::Step.stub :new, assert_extra_arguments do
+      create_journey_subclass do
+        step extra: true do
+          # noop
+        end
+      end
+    end
+  end
 
   test "returns the created step definition" do
     test_case = self # To pass it into the class_eval of create_journey_subclass
