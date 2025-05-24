@@ -201,8 +201,13 @@ module StepperMotor
       increment!(:steps_entered)
       logger.debug { "entering step #{current_step_name}" }
 
-      catch(:abort_step) do
+      # The flow control for reattempt! and cancel! happens inside perform_in_context_of
+      exception_caught_during_perform = nil
+      begin
         @current_step_definition.perform_in_context_of(self)
+      rescue => e
+        exception_caught_during_perform = e
+        logger.debug { "#{e} raised during #{@current_step_definition.name}, will be re-raised after" }
       end
 
       # By the end of the step the Journey must either be untouched or saved
@@ -243,9 +248,12 @@ module StepperMotor
     ensure
       # The instance variables must not be present if `perform_next_step!` gets called
       # on this same object again. This will be the case if the steps are performed inline
-      # and not via background jobs (which reload the model)
+      # and not via background jobs (which reload the model). This should actually be solved
+      # using some object that contains the state of the action later, but for now - the dirty approach is fine.
       @reattempt_after = nil
       @current_step_definition = nil
+      # Re-raise the exception, now that we have persisted the Journey according to the recovery policy
+      raise exception_caught_during_perform if exception_caught_during_perform
       after_step_completes(current_step_name) if current_step_name
     end
 
