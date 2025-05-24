@@ -4,7 +4,10 @@
 # array of the Journey subclass. When the step gets performed, the block passed to the
 # constructor will be instance_exec'd with the Journey model being the context
 class StepperMotor::Step
-  attr_reader :name, :wait, :seq
+  class MissingDefinition < NoMethodError
+  end
+
+  attr_reader :name, :wait, :seq, :wrap
   def initialize(name:, seq:, wait: 0, &step_block)
     @step_block = step_block
     @name = name.to_s
@@ -18,7 +21,7 @@ class StepperMotor::Step
     elsif journey.respond_to?(name)
       journey.public_send(name) # TODO: context/params?
     else
-      raise NoMethodError.new(<<~MSG, name, _args = nil, _private = false, receiver: journey)
+      raise MissingDefinition.new(<<~MSG, name, _args = nil, _private = false, receiver: journey)
         No block or method to use for step `#{name}' on #{journey.class}
       MSG
     end
