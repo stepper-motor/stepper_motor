@@ -350,9 +350,11 @@ MSG
   # any journey that stayed in `performing` for longer than 1 hour has hung. Add this job to your
   # cron table and perform it regularly.
   class RecoverStuckJourneysJobV1 < ActiveJob::Base
+    DEFAULT_STUCK_FOR = T.let(2.days, T.untyped)
+
     # sord omit - no YARD type given for "stuck_for:", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(stuck_for: T.untyped).returns(T.untyped) }
-    def perform(stuck_for: 2.days); end
+    def perform(stuck_for: DEFAULT_STUCK_FOR); end
   end
 end
