@@ -7,6 +7,14 @@ class StepDefinitionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SideEffects::TestHelper
 
+  test "requires either a block or a name" do
+    assert_raises(StepperMotor::StepConfigurationError) do
+      create_journey_subclass do
+        step
+      end
+    end
+  end
+
   test "passes any additional options to the step definition" do
     step_def = StepperMotor::Step.new(name: "a_step", seq: 1)
     assert_extra_arguments = ->(**options) {

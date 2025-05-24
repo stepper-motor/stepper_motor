@@ -88,6 +88,16 @@ module StepperMotor
         wait
       end
       raise StepConfigurationError, "wait: cannot be negative, but computed was #{wait}s" if wait.negative?
+
+      if name.blank? && blk.blank?
+        raise StepConfigurationError, <<~MSG
+          Step #{step_definitions.length + 1} of #{self} has no explicit name,
+          and no block with step definition has been provided. Without a name the step
+          must be defined with a block to execute. If you want an instance method to be
+          executed as a step, pass the name of the method as the name of the step.
+        MSG
+      end
+
       name ||= "step_%d" % (step_definitions.length + 1)
       name = name.to_s
 
@@ -202,11 +212,11 @@ module StepperMotor
       logger.debug { "entering step #{current_step_name}" }
 
       # The flow control for reattempt! and cancel! happens inside perform_in_context_of
-      exception_caught_during_perform = nil
+      ex_rescued_at_perform = nil
       begin
         @current_step_definition.perform_in_context_of(self)
       rescue => e
-        exception_caught_during_perform = e
+        ex_rescued_at_perform = e
         logger.debug { "#{e} raised during #{@current_step_definition.name}, will be re-raised after" }
       end
 
@@ -221,8 +231,12 @@ module StepperMotor
         MSG
       end
 
-      increment!(:steps_completed)
-      logger.debug { "completed #{current_step_name} without exceptions" }
+      if ex_rescued_at_perform
+        logger.warn { "performed #{current_step_name}, #{ex_rescued_at_perform} was raised" }
+      else
+        increment!(:steps_completed)
+        logger.debug { "performed #{current_step_name} without exceptions" }
+      end
 
       if canceled?
         # The step aborted the journey, nothing to do
@@ -240,8 +254,7 @@ module StepperMotor
         set_next_step_and_enqueue(next_step_definition)
         ready!
       else
-        # The hero's journey is complete
-        logger.info { "journey completed" }
+        logger.info { "has finished" } # The hero's journey is complete
         finished!
         update!(previous_step_name: current_step_name, next_step_name: nil)
       end
@@ -253,8 +266,12 @@ module StepperMotor
       @reattempt_after = nil
       @current_step_definition = nil
       # Re-raise the exception, now that we have persisted the Journey according to the recovery policy
-      raise exception_caught_during_perform if exception_caught_during_perform
-      after_step_completes(current_step_name) if current_step_name
+      if ex_rescued_at_perform
+        after_performing_step_with_exception(current_step_name, ex_rescued_at_perform) if current_step_name
+        raise ex_rescued_at_perform
+      elsif current_step_name
+        after_performing_step_without_exception(current_step_name)
+      end
     end
 
     # @return [ActiveSupport::Duration]
@@ -286,10 +303,13 @@ module StepperMotor
     def after_locking_for_step(step_name)
     end
 
+    def after_performing_step_with_exception(step_name, exception)
+    end
+
     def before_step_starts(step_name)
     end
 
-    def after_step_completes(step_name)
+    def after_performing_step_without_exception(step_name)
     end
 
     def schedule!

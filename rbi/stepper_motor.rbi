@@ -20,19 +20,22 @@ module StepperMotor
     # sord omit - no YARD type given for "name:", using untyped
     # sord omit - no YARD type given for "seq:", using untyped
     # sord omit - no YARD type given for "wait:", using untyped
+    # sord omit - no YARD type given for "on_exception:", using untyped
     sig do
       params(
         name: T.untyped,
         seq: T.untyped,
         wait: T.untyped,
+        on_exception: T.untyped,
         step_block: T.untyped
       ).void
     end
-    def initialize(name:, seq:, wait: 0, &step_block); end
+    def initialize(name:, seq:, wait: 0, on_exception: :reattempt!, &step_block); end
 
-    # sord omit - no YARD type given for "journey", using untyped
-    # sord omit - no YARD return type given, using untyped
-    sig { params(journey: T.untyped).returns(T.untyped) }
+    # _@param_ `journey` — the journey to perform the step in. If a `step_block` is passed in, it is going to be executed in the context of the journey using `instance_exec`. If only the name of the step has been provided, an accordingly named public method on the journey will be called
+    # 
+    # _@return_ — void
+    sig { params(journey: StepperMotor::Journey).returns(T.untyped) }
     def perform_in_context_of(journey); end
 
     # sord omit - no YARD type given for :name, using untyped
@@ -115,7 +118,7 @@ module StepperMotor
     # 
     # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`
     # 
-    # _@param_ `step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # _@param_ `additional_step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # 
     # _@return_ — the step definition that has been created
     sig do
@@ -123,11 +126,11 @@ module StepperMotor
         name: T.nilable(String),
         wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
-        step_definition_options: T.untyped,
+        additional_step_definition_options: T.untyped,
         blk: T.untyped
       ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, **step_definition_options, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
@@ -195,6 +198,12 @@ module StepperMotor
     def after_locking_for_step(step_name); end
 
     # sord omit - no YARD type given for "step_name", using untyped
+    # sord omit - no YARD type given for "exception", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(step_name: T.untyped, exception: T.untyped).returns(T.untyped) }
+    def after_performing_step_with_exception(step_name, exception); end
+
+    # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(step_name: T.untyped).returns(T.untyped) }
     def before_step_starts(step_name); end
@@ -202,7 +211,7 @@ module StepperMotor
     # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(step_name: T.untyped).returns(T.untyped) }
-    def after_step_completes(step_name); end
+    def after_performing_step_without_exception(step_name); end
 
     # sord omit - no YARD return type given, using untyped
     sig { returns(T.untyped) }

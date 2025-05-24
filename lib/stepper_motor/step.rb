@@ -15,7 +15,7 @@ class StepperMotor::Step
     @seq = seq
     @on_exception = on_exception # TODO: Validate?
   end
-    
+
   # @param journey[StepperMotor::Journey] the journey to perform the step in. If a `step_block`
   #   is passed in, it is going to be executed in the context of the journey using `instance_exec`.
   #   If only the name of the step has been provided, an accordingly named public method on the
