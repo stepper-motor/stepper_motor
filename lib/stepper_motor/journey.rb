@@ -14,17 +14,17 @@ module StepperMotor
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   #
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         hero.close_account!
   #       end
@@ -61,7 +61,22 @@ module StepperMotor
 
     # Defines a step in the journey.
     # Steps are stacked top to bottom and get performed in sequence.
-    def self.step(name = nil, wait: nil, after: nil, &blk)
+    #
+    # @param name[String,nil] the name of the step. If none is provided, a name will be automatically generated based
+    #    on the position of the step in the list of `step_definitions`. The name can also be used to call a method
+    #    on the `Journey` instead of calling the provided block.
+    # @param wait[Float,#to_f,ActiveSupport::Duration] the amount of time this step should wait before getting performed.
+    #    When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the
+    #    `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
+    # @param after[Float,#to_f,ActiveSupport::Duration] the amount of time this step should wait before getting performed
+    #    including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed
+    #    to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this
+    #    amount of time _minus the `wait` values of the preceding steps, and the
+    #    `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait`
+    #    value and passed to the step definition. Mutually exclusive with `wait:`
+    # @param additional_step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # @return [StepperMotor::Step] the step definition that has been created
+    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -80,12 +95,12 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      step_definition = StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, &blk)
-
-      # As per Rails docs: you need to be aware when using class_attribute with mutable structures
-      # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
-      # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
-      self.step_definitions = step_definitions + [step_definition]
+      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, **additional_step_definition_options, &blk).tap do |step_definition|
+        # As per Rails docs: you need to be aware when using class_attribute with mutable structures
+        # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
+        # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
+        self.step_definitions = step_definitions + [step_definition]
+      end
     end
 
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
@@ -186,8 +201,13 @@ module StepperMotor
       increment!(:steps_entered)
       logger.debug { "entering step #{current_step_name}" }
 
-      catch(:abort_step) do
+      # The flow control for reattempt! and cancel! happens inside perform_in_context_of
+      exception_caught_during_perform = nil
+      begin
         @current_step_definition.perform_in_context_of(self)
+      rescue => e
+        exception_caught_during_perform = e
+        logger.debug { "#{e} raised during #{@current_step_definition.name}, will be re-raised after" }
       end
 
       # By the end of the step the Journey must either be untouched or saved
@@ -228,9 +248,12 @@ module StepperMotor
     ensure
       # The instance variables must not be present if `perform_next_step!` gets called
       # on this same object again. This will be the case if the steps are performed inline
-      # and not via background jobs (which reload the model)
+      # and not via background jobs (which reload the model). This should actually be solved
+      # using some object that contains the state of the action later, but for now - the dirty approach is fine.
       @reattempt_after = nil
       @current_step_definition = nil
+      # Re-raise the exception, now that we have persisted the Journey according to the recovery policy
+      raise exception_caught_during_perform if exception_caught_during_perform
       after_step_completes(current_step_name) if current_step_name
     end
 

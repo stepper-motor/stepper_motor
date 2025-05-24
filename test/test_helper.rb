@@ -43,13 +43,4 @@ module JourneyDefinitionHelper
   end
 end
 
-module Despec
-  def it(desc)
-    test(desc) do
-      flunk "To rewrite: #{desc}"
-    end
-  end
-end
-
 ActiveSupport::TestCase.include(JourneyDefinitionHelper)
-ActiveSupport::TestCase.extend(Despec)
