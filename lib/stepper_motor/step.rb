@@ -24,7 +24,7 @@ class StepperMotor::Step
   #   The possible values are:
   #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
   #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
-  def initialize(name:, seq:, wait: 0, on_exception:, &step_block)
+  def initialize(name:, seq:, on_exception:, wait: 0, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait

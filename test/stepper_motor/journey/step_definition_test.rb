@@ -16,7 +16,7 @@ class StepDefinitionTest < ActiveSupport::TestCase
   end
 
   test "passes any additional options to the step definition" do
-    step_def = StepperMotor::Step.new(name: "a_step", seq: 1)
+    step_def = StepperMotor::Step.new(name: "a_step", seq: 1, on_exception: :reattempt!)
     assert_extra_arguments = ->(**options) {
       assert options.key?(:extra)
       # Return the original definition

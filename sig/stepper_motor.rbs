@@ -16,37 +16,38 @@ module StepperMotor
   # array of the Journey subclass. When the step gets performed, the block passed to the
   # constructor will be instance_exec'd with the Journey model being the context
   class Step
-    # sord omit - no YARD type given for "name:", using untyped
     # sord omit - no YARD type given for "seq:", using untyped
-    # sord omit - no YARD type given for "wait:", using untyped
-    # sord omit - no YARD type given for "on_exception:", using untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # Creates a new step definition
+    # 
+    # _@param_ `name` — the name of the Step
+    # 
+    # _@param_ `wait` — the amount of time to wait before entering the step
+    # 
+    # _@param_ `on_exception` — the action to take if an exception occurs when performing the step. The possible values are: * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising. * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
     def initialize: (
-                      name: untyped,
+                      name: (String | Symbol),
                       seq: untyped,
-                      ?wait: untyped,
-                      ?on_exception: untyped
+                      on_exception: Symbol,
+                      ?wait: (Numeric | ActiveSupport::Duration)
                     ) -> void
 
+    # Performs the step on the passed Journey, wrapping the step with the required context.
+    # 
     # _@param_ `journey` — the journey to perform the step in. If a `step_block` is passed in, it is going to be executed in the context of the journey using `instance_exec`. If only the name of the step has been provided, an accordingly named public method on the journey will be called
     # 
     # _@return_ — void
     def perform_in_context_of: (StepperMotor::Journey journey) -> untyped
 
-    # sord omit - no YARD type given for :name, using untyped
-    # Returns the value of attribute name.
-    attr_reader name: untyped
+    # _@return_ — the name of the step or method to call on the Journey
+    attr_reader name: String
 
-    # sord omit - no YARD type given for :wait, using untyped
-    # Returns the value of attribute wait.
-    attr_reader wait: untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # _@return_ — how long to wait before performing the step
+    attr_reader wait: (Numeric | ActiveSupport::Duration)
 
     # sord omit - no YARD type given for :seq, using untyped
-    # Returns the value of attribute seq.
     attr_reader seq: untyped
-
-    # sord omit - no YARD type given for :wrap, using untyped
-    # Returns the value of attribute wrap.
-    attr_reader wrap: untyped
 
     class MissingDefinition < NoMethodError
     end
@@ -107,6 +108,8 @@ module StepperMotor
     # 
     # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`
     # 
+    # _@param_ `on_exception` — See {StepperMotor::Step#on_exception}
+    # 
     # _@param_ `additional_step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # 
     # _@return_ — the step definition that has been created
@@ -114,6 +117,7 @@ module StepperMotor
                      ?String? name,
                      ?wait: (Float | untyped | ActiveSupport::Duration)?,
                      ?after: (Float | untyped | ActiveSupport::Duration)?,
+                     ?on_exception: Symbol,
                      **untyped additional_step_definition_options
                    ) -> StepperMotor::Step
 
