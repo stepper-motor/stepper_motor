@@ -1,10 +1,53 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 class StepDefinitionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SideEffects::TestHelper
+
+  test "requires either a block or a name" do
+    assert_raises(StepperMotor::StepConfigurationError) do
+      create_journey_subclass do
+        step
+      end
+    end
+  end
+
+  test "passes any additional options to the step definition" do
+    step_def = StepperMotor::Step.new(name: "a_step", seq: 1, on_exception: :reattempt!)
+    assert_extra_arguments = ->(**options) {
+      assert options.key?(:extra)
+      # Return the original definition
+      step_def
+    }
+
+    StepperMotor::Step.stub :new, assert_extra_arguments do
+      create_journey_subclass do
+        step extra: true do
+          # noop
+        end
+      end
+    end
+  end
+
+  test "returns the created step definition" do
+    test_case = self # To pass it into the class_eval of create_journey_subclass
+    create_journey_subclass do
+      step_def1 = step do
+        # noop
+      end
+
+      step_def2 = step :another_step do
+        # noop
+      end
+
+      test_case.assert_kind_of StepperMotor::Step, step_def1
+      test_case.assert_kind_of StepperMotor::Step, step_def2
+      test_case.assert_equal "another_step", step_def2.name
+    end
+  end
 
   test "allows steps to be defined as instance method names" do
     journey_class = create_journey_subclass do

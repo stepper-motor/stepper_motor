@@ -32,21 +32,26 @@ We believe all of these solutions do not quite hit the "sweet spot" where step w
 
 * Most Rails apps already have a perfectly fit transactional, durable data store - the main database
 * The devloper should not have intimate understanding of DB atomicity and ActiveRecord `with_lock` and `reload` to have step workflows
-* It should not be necessary to configure a whole extra service (like Temporal.io) just for supporting those workflows. A service like that should be a part of your monolith, not an external application. It should not be necessary to talk to that service using complex, Ruby-unfriendly protocols and interfaces like gRPC.
+* It should not be necessary to configure a whole extra service (like Temporal.io) just for supporting those workflows. A service like that should be a part of your monolith, not an external application. It should not be necessary to talk to that service using complex, Ruby-unfriendly protocols and interfaces like gRPC. It should not be needed to run complex scheduling systems such as ZooKeeper either.
 
-So, StepperMotor aims to give you "just enough of Temporal-like functionality" for most Rails-bound workflows. Without extra dependencies, network calls, services or having to learn extra languages. So let's dive in.
+So, StepperMotor aims to give you "just enough of Temporal-like functionality" for most Rails-bound workflows. Without extra dependencies, network calls, services or having to learn extra languages. We hope you will enjoy using it just as much as we do! Let's dive in!
 
-## How we do it
+## A brief introduction to StepperMotor
 
 StepperMotor is built around the concept of a `Journey`. A `Journey` [is a sequence of steps happening to a `hero`](https://en.wikipedia.org/wiki/Hero%27s_journey) - once launched, the journey will run until it either finishes or cancels. A `Journey` is just an `ActiveRecord` model, with all the persistence methods you already know and use.
 
-Steps are defined inside the Journey as blocks, and they run in the context of the `Journey` model. The following constraints apply:
+Steps are defined inside the Journey subclasses as blocks, and they run in the context of that subclass' instance. The following constraints apply:
 
 * For any one Journey, only one Fiber/Thread/Process may be performing a step on it
 * For any one Journey, only one step can be executing at any given time
 * For any `hero`, multiple different Journeys may exist and be in different stages of completion
+* For any `hero`, multiple Journeys of the same class may exist and be in different stages of completion if that was permitted at Journey creation
 
 The `step` blocks get executed in the context of the `Journey` model instance. This is done so that you can define helper methods in the `Journey` subclass, and make good use of them. A Journey links to just one record - the `hero`.
+
+The steps are performed asynchronously, via ActiveJob. When a Journey is created, it gets scheduled for its initial step. The job then gets picked up by the ActiveJob queue worker (whichever you are using) and triggers the step on the `Journey`. If the journey decides to continue to the next step, it schedules another ActiveJob for itself with the step name and other details necessary.
+
+No state is carried inside the job.
 
 ## Installation
 
@@ -85,7 +90,9 @@ class SignupController
 end
 ```
 
-## A few sample journeys: single step with repeats
+## A few sample journeys
+
+### Single step with repeats
 
 Let's examine a simple single-step journey. Imagine you have a user that is about to churn, and you want to keep sending them drip emails until they churn in the hope that they will reconvert. The Journey will likely look like this:
 
@@ -111,7 +118,7 @@ ChurnPreventionJourney.create(hero: user)
 
 In this case we have just one `step` which is going to be repeated. When we decide to repeat a step (if the user still has time to reconnect with the business), we postpone its execution by a certain amount of time - in this case, half the days remaining on the user's subscription. If a user rescubscribes, we `cancel!` the only step of the `Journey`, after which it gets marked `finished` in the database.
 
-## More sample journeys: email drip campaign
+### Email drip campaign
 
 As our second example, let's check out a drip campaign which inceitivises a user with bonuses as their account nears termination.
 
@@ -151,7 +158,7 @@ end
 
 In this instance, we split our workflow in a number of steps - 4 in total. After the first step (`:first`) we wait for 14 days before executing the next one. 7 days later - we run another one. We end with closing the user's account. If the user has reengaged at any step, we mark the `Journey` as `canceled`.
 
-## More sample journeys: archiving and deleting user data
+### Archiving and deleting user data
 
 Imagine a user on your platform has requested their account to be deleted. Usually you do some archiving before deletion, to preserve some data that can be useful in aggregate - just scrubbing the PII. You also change the user information so that the user does not show up in the normal application flows anymore.
 
@@ -189,7 +196,7 @@ end
 
 While this is seemingly overkill to have steps defined for this type of workflow, the basic premise of a `Journey` still offers you substantial benefits. For example, you never want to enter `delete_data` before `archive_pseudonymized_data` has completed. Same with the `send_deletion_email` - you do not want to notify the user berore their data is actually gone. Neither do you want there to ever be more than 1 process executing any of those steps.
 
-## More sample journeys: performing an outgoing payment
+### Performing an outgoing payment
 
 Another fairly widely known use case for step workflows is initiating a payment. We first initiate a payment through an external provider, and then poll for its state to revert or complete the payment.
 
@@ -234,17 +241,54 @@ end
 
 Here, we first initiate a payment using an idempotency key, and then poll for its completion or failure repeatedly. When a payment fails or succeeds, we notify the sender and finish the `Journey`. Note that this `Journey` is of a _payment,_ not of the user. A user may have multiple Payments in flight, each with their own `Journey` being tracket transactionally and correctly.
 
-## Transactional semantics
+## Flow control within steps
+
+Inside a step, you currently can use the following flow control methods:
+
+* `cancel!` - cancel the Journey immediately. It will be persisted and moved into the `canceled` state.
+* `reattempt!` - reattempt the Journey immediately, triggering it asynchronously. It will be persisted
+    and returned into the `ready` state. You can specify the `wait:` interval, which may deviate from
+    the wait time defined for the current step
+
+> [!IMPORTANT]  
+> Flow control methods use `throw`. Unlike Rails `render` or `redirect` that require an explicit `return`, the code following
+> a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
+
+You can't call those methods outside of the context of a performing step, and an exception is going to be raised if you do.
+
+
+## Transactional semantics within steps
 
 Getting the transactional semantics _right_ with a system like StepperMotor is crucial. We strike a decent balance between reliability/durability and performance, namely:
 
 * The initial "checkout" of a `Journey` for performing a step is lock-guarded
-* Inside the lock guard the `state` of the `Journey` gets set to `performing` - you can see that a journey is currently being performed, and no other processes will evern checkout that same `Journey`
+* Inside the lock guard the `state` of the `Journey` gets set to `performing` - you can see that a journey is currently being performed, and no other processes will ever checkout that same `Journey`
 * The transaction is only applied at the start of the step, _outside_ of that step's block. This means that you can perform long-running operations in your steps, as long as they are idempotent - and manage transactions inside of the steps.
 
 We chose to make StepperMotor "transactionless" inside the steps because the operations and side effects we usually care about would be long-running and performing HTTP or RPC requests. Had the step been wrapped with a transaction, the transaction could become very long - creating a potential for a fairly large rollback in case the step fails.
 
 Another reason why we avoid forced transactions is that if, for whatever reason, you need multiple idempotent actions _inside_ of a step the outer transaction would not permit you to have those. We prefer leaving that flexibility to the end application.
+
+Should you need to wrap your entire step in a transaction, you can do so manually.
+
+## ActiveJob and transactions
+
+We recommend using a "co-committing" ActiveJob adapter with stepper_motor (an adapter which has the queue in the same RDBMS as your business model tables). Queue adapters that support this:
+
+* [gouda](https://github.com/cheddar-me/gouda)
+* [good_job](https://github.com/bensheldon/good_job)
+* [solid_queue](https://github.com/rails/solid_queue) - with the same database used for the queue as the one used for Journeys
+
+While Rails core admittedly [insists on the stylistic choice of denying the users the option of co-committing their jobs](https://github.com/rails/rails/pull/53375#issuecomment-2555694252) we find this a highly inconsiderate choice, which has highly negative consequences for a system such as stepper_motor - where durability is paramount. Having good defaults is appropriate, but not removing a crucial affordance that a DB-based job queue provides is downright user-hostile.
+
+In the future, StepperMotor _may_ move to a transactional outbox pattern whereby we emit events into a separate table and whichever queue adapter you have installed will be picking those messages up.
+
+For its own "trigger" job (the `PerformStepJob` and its versions) stepper_motor is configured to commit it with the Journey state changes, within the same transaction.
+
+This is done for the following reasons:
+
+* Not having the Journey with up-to-date state in teh DB when the job performs will lead to the job silently skipping, which is undesirable
+* But having the app crash between the Journey state committing and the trigger job committing is even less desirable. This would lead to jobs hanging in the `ready` state indefinitly, seemingly at random.
 
 ## Saving side-effects of steps
 
@@ -369,7 +413,7 @@ step :one do
   # perform some action
 end
 
-step :one_bis_ do
+step :one_bis do
   # some compliance action
 end
 
@@ -385,3 +429,94 @@ So, rules of thumb:
 * When steps are recalled to be performed, they get recalled _by name._
 * When preparing for the next step, _the next step from the current in order of definition_ is going to be used.
 
+## Using instance methods as steps
+
+You can use instance methods as steps by passing their name as a symbol to the `step` method:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :erase_attachments
+  step :erase_emails
+
+  def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
+
+Since a method definition in Ruby returns a Symbol, you can use the return value of the `def` expression
+to define a `step` immediately:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  step def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
+## Exception handling inside steps
+
+> [!IMPORTANT]
+> Exception handling in steps is in flux, expect API changes.
+
+When performing the step, any exceptions raised from within the step will be stored in a local
+variable to allow the Journey to be released as either `ready`, `finished` or `canceled`. The exception
+will be raised from within an `ensure` block after the persistence has been taken care of.
+
+By default, if an exception is raised inside a step the Journey is going to be canceled. This is done for a number of reasons:
+
+* An endlessly reattempting step can cause load on your infrastructure and will never stop retrying
+* Since at the moment there is no configuration for backoff, such a step is likely to hit rate limits on the external resource it hits
+* It is likely a condition that was not anticipated when the Journey was written, thus a blind reattempt is unwise.
+
+While we may change this in future versions of `stepper_motor`, the current default is thus to `cancel!` the Journey if an unhandled
+error occurs. You can, however, switch it to `reattempt!` a Journey should a particular step raise. This is configured per step:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :initiate_deletion, on_exception: :reattempt! do
+    # ..Do the requisite work
+  end
+end
+```
+
+or, if you know that the correct action is to cancel the journey - specify it explicitly (even though it is the default at the moment)
+
+We recommend handling exceptions you care about explicitly inside your step definitions. This allows for
+more fine-grained error matching and does not disrupt the step execution. If you want to register the
+exceptions you `rescue` inside steps, make use of the `Rails.error.report` [method](https://guides.rubyonrails.org/error_reporting.html#manually-reporting-errors)
+
+```ruby
+class Payment < StepperMotor::Journey
+  step def initiate_payment
+    payment = hero
+    client = PaymentProvider::Client.new
+    client.initiate_payment(idempotency_key: payment.id, amount: payment.amount_cents, recipient: payment.recipient.id)
+  rescue PaymentProvider::ConfigurationError => e
+    payment.failed!
+    Rails.error.report(e)
+    cancel! # Without reconfiguration the payment will never initiate
+  rescue PaymentProvider::RateLimitExceeded => e
+    reattempt! wait: e.retry_after
+  rescue PaymentProvider::Timeout
+    reattempt! wait: rand(0.0..5.0) # Add some jitter
+  rescue PaymentProvider::AccountBlocked
+    paymend.failed!
+    cancel! # Do not even report the error - the account has been closed and will stay closed forever
+  end
+end
+```
+
+This, however, is not always practical - classifying all the errors manually is a pretty daunting task, 

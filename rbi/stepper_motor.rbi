@@ -17,38 +17,49 @@ module StepperMotor
   # array of the Journey subclass. When the step gets performed, the block passed to the
   # constructor will be instance_exec'd with the Journey model being the context
   class Step
-    # sord omit - no YARD type given for "name:", using untyped
     # sord omit - no YARD type given for "seq:", using untyped
-    # sord omit - no YARD type given for "wait:", using untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # Creates a new step definition
+    # 
+    # _@param_ `name` — the name of the Step
+    # 
+    # _@param_ `wait` — the amount of time to wait before entering the step
+    # 
+    # _@param_ `on_exception` — the action to take if an exception occurs when performing the step. The possible values are: * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising. * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
     sig do
       params(
-        name: T.untyped,
+        name: T.any(String, Symbol),
         seq: T.untyped,
-        wait: T.untyped,
+        on_exception: Symbol,
+        wait: T.any(Numeric, ActiveSupport::Duration),
         step_block: T.untyped
       ).void
     end
-    def initialize(name:, seq:, wait: 0, &step_block); end
+    def initialize(name:, seq:, on_exception:, wait: 0, &step_block); end
 
-    # sord omit - no YARD type given for "journey", using untyped
-    # sord omit - no YARD return type given, using untyped
-    sig { params(journey: T.untyped).returns(T.untyped) }
+    # Performs the step on the passed Journey, wrapping the step with the required context.
+    # 
+    # _@param_ `journey` — the journey to perform the step in. If a `step_block` is passed in, it is going to be executed in the context of the journey using `instance_exec`. If only the name of the step has been provided, an accordingly named public method on the journey will be called
+    # 
+    # _@return_ — void
+    sig { params(journey: StepperMotor::Journey).returns(T.untyped) }
     def perform_in_context_of(journey); end
 
-    # sord omit - no YARD type given for :name, using untyped
-    # Returns the value of attribute name.
-    sig { returns(T.untyped) }
+    # _@return_ — the name of the step or method to call on the Journey
+    sig { returns(String) }
     attr_reader :name
 
-    # sord omit - no YARD type given for :wait, using untyped
-    # Returns the value of attribute wait.
-    sig { returns(T.untyped) }
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # _@return_ — how long to wait before performing the step
+    sig { returns(T.any(Numeric, ActiveSupport::Duration)) }
     attr_reader :wait
 
     # sord omit - no YARD type given for :seq, using untyped
-    # Returns the value of attribute seq.
     sig { returns(T.untyped) }
     attr_reader :seq
+
+    class MissingDefinition < NoMethodError
+    end
   end
 
   # A Journey is the main building block of StepperMotor. You create a journey to guide a particular model
@@ -62,17 +73,17 @@ module StepperMotor
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         ReinviteMailer.with(recipient: hero).deliver_later
   #       end
   # 
-  #       step, wait: 3.days do
+  #       step wait: 3.days do
   #         cancel! if hero.active?
   #         hero.close_account!
   #       end
@@ -94,21 +105,35 @@ module StepperMotor
     sig { returns(T.untyped) }
     def step_definitions; end
 
-    # sord omit - no YARD type given for "name", using untyped
-    # sord omit - no YARD type given for "wait:", using untyped
-    # sord omit - no YARD type given for "after:", using untyped
-    # sord omit - no YARD return type given, using untyped
+    # sord duck - #to_f looks like a duck type, replacing with untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
+    # sord duck - #to_f looks like a duck type, replacing with untyped
+    # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # Defines a step in the journey.
     # Steps are stacked top to bottom and get performed in sequence.
+    # 
+    # _@param_ `name` — the name of the step. If none is provided, a name will be automatically generated based on the position of the step in the list of `step_definitions`. The name can also be used to call a method on the `Journey` instead of calling the provided block.
+    # 
+    # _@param_ `wait` — the amount of time this step should wait before getting performed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
+    # 
+    # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`
+    # 
+    # _@param_ `on_exception` — See {StepperMotor::Step#on_exception}
+    # 
+    # _@param_ `additional_step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # 
+    # _@return_ — the step definition that has been created
     sig do
       params(
-        name: T.untyped,
-        wait: T.untyped,
-        after: T.untyped,
+        name: T.nilable(String),
+        wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
+        after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
+        on_exception: Symbol,
+        additional_step_definition_options: T.untyped,
         blk: T.untyped
-      ).returns(T.untyped)
+      ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :cancel!, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
@@ -176,6 +201,12 @@ module StepperMotor
     def after_locking_for_step(step_name); end
 
     # sord omit - no YARD type given for "step_name", using untyped
+    # sord omit - no YARD type given for "exception", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(step_name: T.untyped, exception: T.untyped).returns(T.untyped) }
+    def after_performing_step_with_exception(step_name, exception); end
+
+    # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(step_name: T.untyped).returns(T.untyped) }
     def before_step_starts(step_name); end
@@ -183,7 +214,7 @@ module StepperMotor
     # sord omit - no YARD type given for "step_name", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(step_name: T.untyped).returns(T.untyped) }
-    def after_step_completes(step_name); end
+    def after_performing_step_without_exception(step_name); end
 
     # sord omit - no YARD return type given, using untyped
     sig { returns(T.untyped) }
