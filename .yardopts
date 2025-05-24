@@ -1,1 +1,1 @@
---markup markdown - docs/MANUAL.md
+--markup markdown --no-private - manual/MANUAL.md
