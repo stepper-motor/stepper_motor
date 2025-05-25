@@ -249,10 +249,15 @@ Inside a step, you currently can use the following flow control methods:
 * `reattempt!` - reattempt the Journey immediately, triggering it asynchronously. It will be persisted
     and returned into the `ready` state. You can specify the `wait:` interval, which may deviate from
     the wait time defined for the current step
+* `pause!` - pause the Journey either within a step or outside of one. This moves the Journey into the `paused` state.
+    In that state, the journey is still considered unique-per-hero (you won't be able to create an identical Journey)
+    but it will not be picked up by the scheduled step jobs. Should it get picked up, the step will not be performed.
+    You have to explicitly `resume!` the Journey to make it `ready` - once you do, a new job will be scheduled to
+    perform the step.
 
 > [!IMPORTANT]  
-> Flow control methods use `throw`. Unlike Rails `render` or `redirect` that require an explicit `return`, the code following
-> a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
+> Flow control methods use `throw` when they are called from inside a step. Unlike Rails `render` or `redirect` that require an explicit
+> `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
 
 You can't call those methods outside of the context of a performing step, and an exception is going to be raised if you do.
 
@@ -473,16 +478,16 @@ end
 
 When performing the step, any exceptions raised from within the step will be stored in a local
 variable to allow the Journey to be released as either `ready`, `finished` or `canceled`. The exception
-will be raised from within an `ensure` block after the persistence has been taken care of.
+will be raised from within an `ensure` block after the persistence of the Journey has been taken care of.
 
-By default, if an exception is raised inside a step the Journey is going to be canceled. This is done for a number of reasons:
+By default, an exception raised inside a step of a Journey will _pause_ that Journey. This is done for a number of reasons:
 
 * An endlessly reattempting step can cause load on your infrastructure and will never stop retrying
 * Since at the moment there is no configuration for backoff, such a step is likely to hit rate limits on the external resource it hits
 * It is likely a condition that was not anticipated when the Journey was written, thus a blind reattempt is unwise.
 
-While we may change this in future versions of `stepper_motor`, the current default is thus to `cancel!` the Journey if an unhandled
-error occurs. You can, however, switch it to `reattempt!` a Journey should a particular step raise. This is configured per step:
+While we may change this in future versions of `stepper_motor`, the current default is thus to `pause!` the Journey if an unhandled
+exception occurs. You can, however, switch it to `reattempt!` or `cancel!` a Journey should a particular step raise. This is configured per step:
 
 ```ruby
 class Erasure < StepperMotor::Journey
@@ -493,6 +498,14 @@ end
 ```
 
 or, if you know that the correct action is to cancel the journey - specify it explicitly (even though it is the default at the moment)
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :initiate_deletion, on_exception: :cancel! do
+    # ..Do the requisite work
+  end
+end
+```
 
 We recommend handling exceptions you care about explicitly inside your step definitions. This allows for
 more fine-grained error matching and does not disrupt the step execution. If you want to register the
@@ -510,6 +523,9 @@ class Payment < StepperMotor::Journey
     cancel! # Without reconfiguration the payment will never initiate
   rescue PaymentProvider::RateLimitExceeded => e
     reattempt! wait: e.retry_after
+  rescue PaymentProvider::InsufficientFunds => e
+    payment.sender.add_compliance_note("Halted payment due to insufficient funds")
+    pause!
   rescue PaymentProvider::Timeout
     reattempt! wait: rand(0.0..5.0) # Add some jitter
   rescue PaymentProvider::AccountBlocked
@@ -519,4 +535,4 @@ class Payment < StepperMotor::Journey
 end
 ```
 
-This, however, is not always practical - classifying all the errors manually is a pretty daunting task, 
+

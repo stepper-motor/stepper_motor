@@ -30,7 +30,7 @@ module SideEffects
       end
     end
 
-    def assert_no_side_effects(*side_effect_names)
+    def assert_no_side_effects
       SideEffects.clear!
       yield.tap do
         assert SideEffects.none?, "No side effect should have been produced"

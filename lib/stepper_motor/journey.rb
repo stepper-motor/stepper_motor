@@ -36,17 +36,20 @@ module StepperMotor
   #
   # To stop the journey forcibly, delete it from your database - or call `cancel!` within any of the steps.
   class Journey < ActiveRecord::Base
+    require_relative "journey/flow_control"
+    include StepperMotor::Journey::FlowControl
+
     require_relative "journey/recovery"
     include StepperMotor::Journey::Recovery
 
     self.table_name = "stepper_motor_journeys"
 
-    # @return [Array] the step definitions defined so far
+    # @return [Array<StepperMotor::Step>] the step definitions defined so far
     class_attribute :step_definitions, default: []
 
     belongs_to :hero, polymorphic: true, optional: true
 
-    STATES = %w[ready performing canceled finished]
+    STATES = %w[ready paused performing canceled finished]
     enum :state, STATES.zip(STATES).to_h, default: "ready"
 
     # Allows querying for journeys for this specific hero. This uses a scope for convenience as the hero
@@ -77,7 +80,7 @@ module StepperMotor
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
     # @param additional_step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :cancel!, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -135,27 +138,6 @@ module StepperMotor
     # @see Journey.lookup_step_definition
     def lookup_step_definition(by_step_name)
       self.class.lookup_step_definition(by_step_name)
-    end
-
-    # Is a convenient way to end a hero's journey. Imagine you enter a step where you are inviting a user
-    # to rejoin the platform, and are just about to send them an email - but they have already joined. You
-    # can therefore cancel their journey. Canceling bails you out of the `step`-defined block and sets the journey record to the `canceled` state.
-    #
-    # Calling `cancel!` will abort the execution of the current step.
-    def cancel!
-      canceled!
-      throw :abort_step
-    end
-
-    # Inside a step it is possible to ask StepperMotor to retry to start the step at a later point in time. Maybe now is an inconvenient moment
-    # (are you about to send a push notification at 3AM perhaps?). The `wait:` parameter specifies how long to defer reattempting the step for.
-    # Reattempting will resume the step from the beginning, so the step should be idempotent.
-    #
-    # Calling `reattempt!` will abort the execution of the current step.
-    def reattempt!(wait: nil)
-      # The default `wait` is the one for the step definition
-      @reattempt_after = wait || @current_step_definition.wait || 0
-      throw :abort_step
     end
 
     # Performs the next step in the journey. Will check whether any other process has performed the step already
@@ -239,9 +221,9 @@ module StepperMotor
         logger.debug { "performed #{current_step_name} without exceptions" }
       end
 
-      if canceled?
-        # The step aborted the journey, nothing to do
-        logger.info { "has been canceled inside #{current_step_name}" }
+      if paused? || canceled?
+        # The step made arrangements regarding how we shoudl continue, nothing to do
+        logger.info { "has been #{state} inside #{current_step_name}" }
       elsif @reattempt_after
         # The step asked the actions to be attempted at a later time
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
