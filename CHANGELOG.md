@@ -13,17 +13,6 @@
 - Add frozen string literals
 - Relocate Recovery into a module
 
-## Summary of Changes in 0.1.7
-
-Version 0.1.7 focuses on improving Rails integration reliability and database performance:
-
-- Rails Integration:
-  - Railtie now loads earlier in the boot process
-  - Generator loading uses relative paths for better reliability
-- Database:
-  - Add concurrent index creation for stuck journeys
-  - Fix index creation to work in all environments
-
 ## [0.1.7] - 2025-05-19
 
 - Improve Rails integration reliability:
