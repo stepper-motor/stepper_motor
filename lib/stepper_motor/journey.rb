@@ -36,17 +36,20 @@ module StepperMotor
   #
   # To stop the journey forcibly, delete it from your database - or call `cancel!` within any of the steps.
   class Journey < ActiveRecord::Base
+    require_relative "journey/flow_control"
+    include StepperMotor::Journey::FlowControl
+
     require_relative "journey/recovery"
     include StepperMotor::Journey::Recovery
 
     self.table_name = "stepper_motor_journeys"
 
-    # @return [Array] the step definitions defined so far
+    # @return [Array<StepperMotor::Step>] the step definitions defined so far
     class_attribute :step_definitions, default: []
 
     belongs_to :hero, polymorphic: true, optional: true
 
-    STATES = %w[ready performing canceled finished]
+    STATES = %w[ready paused performing canceled finished]
     enum :state, STATES.zip(STATES).to_h, default: "ready"
 
     # Allows querying for journeys for this specific hero. This uses a scope for convenience as the hero
@@ -135,27 +138,6 @@ module StepperMotor
     # @see Journey.lookup_step_definition
     def lookup_step_definition(by_step_name)
       self.class.lookup_step_definition(by_step_name)
-    end
-
-    # Is a convenient way to end a hero's journey. Imagine you enter a step where you are inviting a user
-    # to rejoin the platform, and are just about to send them an email - but they have already joined. You
-    # can therefore cancel their journey. Canceling bails you out of the `step`-defined block and sets the journey record to the `canceled` state.
-    #
-    # Calling `cancel!` will abort the execution of the current step.
-    def cancel!
-      canceled!
-      throw :abort_step
-    end
-
-    # Inside a step it is possible to ask StepperMotor to retry to start the step at a later point in time. Maybe now is an inconvenient moment
-    # (are you about to send a push notification at 3AM perhaps?). The `wait:` parameter specifies how long to defer reattempting the step for.
-    # Reattempting will resume the step from the beginning, so the step should be idempotent.
-    #
-    # Calling `reattempt!` will abort the execution of the current step.
-    def reattempt!(wait: nil)
-      # The default `wait` is the one for the step definition
-      @reattempt_after = wait || @current_step_definition.wait || 0
-      throw :abort_step
     end
 
     # Performs the next step in the journey. Will check whether any other process has performed the step already
