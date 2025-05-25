@@ -46,7 +46,7 @@ class ExceptionHandlingTest < ActiveSupport::TestCase
     assert faulty_journey.canceled?
   end
 
-  test "cancels the journey by default at the failig step" do
+  test "pauses the journey by default at the failig step" do
     faulty_journey_class = create_journey_subclass do
       step do
         raise CustomEx, "Something went wrong"
@@ -61,7 +61,7 @@ class ExceptionHandlingTest < ActiveSupport::TestCase
 
     assert faulty_journey.persisted?
     refute faulty_journey.changed?
-    assert faulty_journey.canceled?
+    assert faulty_journey.paused?
   end
 
   test "is able to get the journey into reattempt even if the step has caused an invalid transaction" do

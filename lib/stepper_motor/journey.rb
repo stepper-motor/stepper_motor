@@ -80,7 +80,7 @@ module StepperMotor
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
     # @param additional_step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :cancel!, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -221,9 +221,9 @@ module StepperMotor
         logger.debug { "performed #{current_step_name} without exceptions" }
       end
 
-      if canceled?
-        # The step aborted the journey, nothing to do
-        logger.info { "has been canceled inside #{current_step_name}" }
+      if paused? || canceled?
+        # The step made arrangements regarding how we shoudl continue, nothing to do
+        logger.info { "has been #{state} inside #{current_step_name}" }
       elsif @reattempt_after
         # The step asked the actions to be attempted at a later time
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }

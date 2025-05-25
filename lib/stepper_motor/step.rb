@@ -62,7 +62,7 @@ class StepperMotor::Step
     end
   rescue MissingDefinition
     # This journey won't succeed with any number of reattempts, cancel it. Cancellation also will throw.
-    catch(:abort_step) { journey.cancel! }
+    catch(:abort_step) { journey.pause! }
     raise
   rescue => e
     # Act according to the set policy. The basic 2 for the moment are :reattempt! and :cancel!,
@@ -72,8 +72,10 @@ class StepperMotor::Step
       catch(:abort_step) { journey.reattempt! }
     when :cancel!
       catch(:abort_step) { journey.cancel! }
+    when :pause!
+      catch(:abort_step) { journey.pause! }
     else
-      # Do nothing, which will leave the journey in the "performing" state
+      # Leave the journey hanging in the "performing" state
     end
 
     # Re-raise the exception so that the Rails error handling can register it

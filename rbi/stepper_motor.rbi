@@ -134,7 +134,7 @@ module StepperMotor
         blk: T.untyped
       ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :cancel!, **additional_step_definition_options, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
