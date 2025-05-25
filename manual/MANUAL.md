@@ -13,7 +13,7 @@ Add the gem to the application's Gemfile, and then generate and run the migratio
 
 `stepper_motor` solves a real, tangible problem in Rails apps - tracking activities over long periods of time. It does so in a durable, reentrant and consistent manner, utilizing the guarantees provided by your relational database you already have.
 
-## Philosophy behind StepperMotor
+## Philosophy behind stepper_motor
 
 Most of our applications have workflows which have to happen in steps. They pretty much always have some things in common:
 
@@ -34,11 +34,11 @@ We believe all of these solutions do not quite hit the "sweet spot" where step w
 * The devloper should not have intimate understanding of DB atomicity and ActiveRecord `with_lock` and `reload` to have step workflows
 * It should not be necessary to configure a whole extra service (like Temporal.io) just for supporting those workflows. A service like that should be a part of your monolith, not an external application. It should not be necessary to talk to that service using complex, Ruby-unfriendly protocols and interfaces like gRPC. It should not be needed to run complex scheduling systems such as ZooKeeper either.
 
-So, StepperMotor aims to give you "just enough of Temporal-like functionality" for most Rails-bound workflows. Without extra dependencies, network calls, services or having to learn extra languages. We hope you will enjoy using it just as much as we do! Let's dive in!
+So, stepper_motor aims to give you "just enough of Temporal-like functionality" for most Rails-bound workflows. Without extra dependencies, network calls, services or having to learn extra languages. We hope you will enjoy using it just as much as we do! Let's dive in!
 
-## A brief introduction to StepperMotor
+## A brief introduction to stepper_motor
 
-StepperMotor is built around the concept of a `Journey`. A `Journey` [is a sequence of steps happening to a `hero`](https://en.wikipedia.org/wiki/Hero%27s_journey) - once launched, the journey will run until it either finishes or cancels. A `Journey` is just an `ActiveRecord` model, with all the persistence methods you already know and use.
+stepper_motor is built around the concept of a `Journey`. A `Journey` [is a sequence of steps happening to a `hero`](https://en.wikipedia.org/wiki/Hero%27s_journey) - once launched, the journey will run until it either finishes or cancels. A `Journey` is just an `ActiveRecord` model, with all the persistence methods you already know and use.
 
 Steps are defined inside the Journey subclasses as blocks, and they run in the context of that subclass' instance. The following constraints apply:
 
@@ -264,13 +264,13 @@ You can't call those methods outside of the context of a performing step, and an
 
 ## Transactional semantics within steps
 
-Getting the transactional semantics _right_ with a system like StepperMotor is crucial. We strike a decent balance between reliability/durability and performance, namely:
+Getting the transactional semantics _right_ with a system like stepper_motor is crucial. We strike a decent balance between reliability/durability and performance, namely:
 
 * The initial "checkout" of a `Journey` for performing a step is lock-guarded
 * Inside the lock guard the `state` of the `Journey` gets set to `performing` - you can see that a journey is currently being performed, and no other processes will ever checkout that same `Journey`
 * The transaction is only applied at the start of the step, _outside_ of that step's block. This means that you can perform long-running operations in your steps, as long as they are idempotent - and manage transactions inside of the steps.
 
-We chose to make StepperMotor "transactionless" inside the steps because the operations and side effects we usually care about would be long-running and performing HTTP or RPC requests. Had the step been wrapped with a transaction, the transaction could become very long - creating a potential for a fairly large rollback in case the step fails.
+We chose to make stepper_motor "transactionless" inside the steps because the operations and side effects we usually care about would be long-running and performing HTTP or RPC requests. Had the step been wrapped with a transaction, the transaction could become very long - creating a potential for a fairly large rollback in case the step fails.
 
 Another reason why we avoid forced transactions is that if, for whatever reason, you need multiple idempotent actions _inside_ of a step the outer transaction would not permit you to have those. We prefer leaving that flexibility to the end application.
 
@@ -286,7 +286,7 @@ We recommend using a "co-committing" ActiveJob adapter with stepper_motor (an ad
 
 While Rails core admittedly [insists on the stylistic choice of denying the users the option of co-committing their jobs](https://github.com/rails/rails/pull/53375#issuecomment-2555694252) we find this a highly inconsiderate choice, which has highly negative consequences for a system such as stepper_motor - where durability is paramount. Having good defaults is appropriate, but not removing a crucial affordance that a DB-based job queue provides is downright user-hostile.
 
-In the future, StepperMotor _may_ move to a transactional outbox pattern whereby we emit events into a separate table and whichever queue adapter you have installed will be picking those messages up.
+In the future, stepper_motor _may_ move to a transactional outbox pattern whereby we emit events into a separate table and whichever queue adapter you have installed will be picking those messages up.
 
 For its own "trigger" job (the `PerformStepJob` and its versions) stepper_motor is configured to commit it with the Journey state changes, within the same transaction.
 
@@ -297,14 +297,14 @@ This is done for the following reasons:
 
 ## Saving side-effects of steps
 
-Right now, StepperMotor does not provide any specific tools for saving side-effects or inputs of a step or of the entire `Journey` except for the related `hero` record. The reason for that is that side effects can take many shapes. A side effect may be a file output to S3, a record saved into your database, a file on the filesystem, or a blob of JSON carried around. The way this data has to be persisted can also vary. For the moment, we don't see a good _generalized_ way to persist those side effects aside of the factual outputs. So:
+Right now, stepper_motor does not provide any specific tools for saving side-effects or inputs of a step or of the entire `Journey` except for the related `hero` record. The reason for that is that side effects can take many shapes. A side effect may be a file output to S3, a record saved into your database, a file on the filesystem, or a blob of JSON carried around. The way this data has to be persisted can also vary. For the moment, we don't see a good _generalized_ way to persist those side effects aside of the factual outputs. So:
 
 * A record of the fact that a step has been performed to completion is sufficient to not re-enter that step
 * If you need repeatable, but idempotent steps - idempotency is on you
 
 ## Unique Journeys
 
-By default, StepperMotor will only allow you to have one active `Journey` per journey type for any given specific `hero`. This will fail, either with a uniqueness constraint violation or a validation error:
+By default, stepper_motor will only allow you to have one active `Journey` per journey type for any given specific `hero`. This will fail, either with a uniqueness constraint violation or a validation error:
 
 ```ruby
 SomeJourney.create!(hero: user)
@@ -367,7 +367,7 @@ There are two known approaches for scheduling jobs far into the future. One appr
 
 ```ruby
 Journey.where("state = 'ready' AND next_step_to_be_performed_at <= NOW()").find_each(&:perform_next_step!)
-```` 
+``` 
 
 This scheduling task needs to be run with a high-enough frequency which matches your scheduling patterns.
 
@@ -377,7 +377,7 @@ Another is "forward-scheduling" - when it is known that a step of a journey will
 PerformStepJob.set(wait: journey.next_step_to_be_performed_at).perform_later(journey)
 ```
 
-This creates a large number of jobs on your queue, but will be easier to manage. StepperMotor supports both approaches, and you can configure the one you like using the configuration:
+This creates a large number of jobs on your queue, but will be easier to manage. stepper_motor supports both approaches, and you can configure the one you like using the configuration:
 
 ```ruby
 StepperMotor.configure do |c|
@@ -411,7 +411,7 @@ step :two do
 end
 ```
 
-You have a `Journey` which is about to start step `one`. When the step gets performed, StepperMotor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
+You have a `Journey` which is about to start step `one`. When the step gets performed, stepper_motor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
 
 ```ruby
 step :one do
