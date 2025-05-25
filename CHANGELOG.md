@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.9] - 2025-05-25
+
+- Repair bodged migration from the previous release
+
 ## [0.1.8] - 2025-05-25
 
 - Add ability to pause and resume journeys (#24)

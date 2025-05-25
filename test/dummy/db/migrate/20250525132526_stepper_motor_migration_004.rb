@@ -1,4 +1,4 @@
-class StepperMotorMigration004 < ActiveRecord::Migration[<%= migration_version %>]
+class StepperMotorMigration004 < ActiveRecord::Migration[7.2]
   def up
     quoted_false = connection.quote(false)
     add_index :stepper_motor_journeys, [:type, :hero_id, :hero_type], 
