@@ -6,11 +6,11 @@
 
 ## [0.1.8] - 2025-05-25
 
-- Add ability to pause and resume journeys (#24)
-- Add basic exception rescue during steps (#23)
-- Add idempotency keys when performing steps (#21)
-- Add support for blockless step definitions (#22)
-- Migrate from RSpec to Minitest (#19)
+- Add ability to pause and resume journeys (https://github.com/stepper-motor/stepper_motor/pull/24)
+- Add basic exception rescue during steps (https://github.com/stepper-motor/stepper_motor/pull/23)
+- Add idempotency keys when performing steps (https://github.com/stepper-motor/stepper_motor/pull/21)
+- Add support for blockless step definitions (https://github.com/stepper-motor/stepper_motor/pull/22)
+- Migrate from RSpec to Minitest (https://github.com/stepper-motor/stepper_motor/pull/19)
 - Add Rake task for recovery
 - Add proper Rails engine tests
 - Improve test organization and coverage
@@ -41,7 +41,7 @@
 - Refactor PerformStepJob to use Journey class in job arguments
 - Remove GlobalID dependency
 - Add ability to resolve Journey from base class using `find()`
-- Prepare groundwork for future improvements (#12)
+- Prepare groundwork for future improvements (https://github.com/stepper-motor/stepper_motor/pull/12)
 
 ## [0.1.4] - 2025-03-11
 
