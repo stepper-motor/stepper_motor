@@ -2,7 +2,7 @@
 # StepperMotor is a module for building multi-step flows where steps are sequential and only
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
-  VERSION = T.let("0.1.7", T.untyped)
+  VERSION = T.let("0.1.8", T.untyped)
 
   class Error < StandardError
   end
