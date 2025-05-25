@@ -33,7 +33,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "activerecord", ">= 7"
   spec.add_dependency "activejob"
   spec.add_dependency "railties"
-  spec.add_dependency "globalid"
 
   spec.add_development_dependency "minitest"
   spec.add_development_dependency "rails", "~> 7.0"
