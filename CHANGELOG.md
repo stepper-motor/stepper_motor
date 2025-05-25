@@ -1,6 +1,6 @@
 # Changelog
 
-## Current Changes (Unreleased)
+## [0.1.8] - 2025-05-25
 
 - Add ability to pause and resume journeys (#24)
 - Add basic exception rescue during steps (#23)
