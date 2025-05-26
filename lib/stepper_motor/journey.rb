@@ -48,6 +48,7 @@ module StepperMotor
     class_attribute :step_definitions, default: []
 
     belongs_to :hero, polymorphic: true, optional: true
+    has_many :scheduled_tasks, class_name: "StepperMotor::ScheduledTask", dependent: :delete_all
 
     STATES = %w[ready paused performing canceled finished]
     enum :state, STATES.zip(STATES).to_h, default: "ready"
@@ -185,9 +186,9 @@ module StepperMotor
       # Is we tried to run the step but it is not yet time to do so,
       # enqueue a new job to perform it and stop
       if next_step_to_be_performed_at > Time.current
-        logger.warn { "tried to perform #{current_step_name} prematurely" }
-        schedule!
-        return ready!
+        logger.warn { "tried to perform #{current_step_name} too soon" }
+        set_next_step_and_enqueue(@current_step_definition, wait: next_step_to_be_performed_at - Time.current)
+        return
       end
 
       # Perform the actual step
@@ -205,7 +206,7 @@ module StepperMotor
 
       # By the end of the step the Journey must either be untouched or saved
       if changed?
-        raise StepperMotor::JourneyNotPersisted, <<~MSG
+        ex_rescued_at_perform = StepperMotor::JourneyNotPersisted.new(<<~MSG)
           #{self} had its attributes changed but was not saved inside step #{current_step_name.inspect}
           this means that the subsequent execution (which may be done asynchronously) is likely to see
           a stale Journey, and will execute incorrectly. If you mutate the Journey inside
@@ -214,32 +215,32 @@ module StepperMotor
         MSG
       end
 
-      if ex_rescued_at_perform
-        logger.warn { "performed #{current_step_name}, #{ex_rescued_at_perform} was raised" }
-      else
-        increment!(:steps_completed)
-        logger.debug { "performed #{current_step_name} without exceptions" }
-      end
+      with_lock do
+        if ex_rescued_at_perform
+          logger.warn { "performed #{current_step_name}, #{ex_rescued_at_perform} was raised" }
+        else
+          increment!(:steps_completed)
+          logger.debug { "performed #{current_step_name} without exceptions" }
+        end
 
-      if paused? || canceled?
-        # The step made arrangements regarding how we shoudl continue, nothing to do
-        logger.info { "has been #{state} inside #{current_step_name}" }
-      elsif @reattempt_after
-        # The step asked the actions to be attempted at a later time
-        logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
-        set_next_step_and_enqueue(@current_step_definition, wait: @reattempt_after)
-        ready!
-      elsif finished?
-        logger.info { "was marked finished inside the step" }
-        update!(previous_step_name: current_step_name, next_step_name: nil)
-      elsif (next_step_definition = step_definitions[@current_step_definition.seq + 1])
-        logger.info { "will continue to #{next_step_definition.name}" }
-        set_next_step_and_enqueue(next_step_definition)
-        ready!
-      else
-        logger.info { "has finished" } # The hero's journey is complete
-        finished!
-        update!(previous_step_name: current_step_name, next_step_name: nil)
+        if paused? || canceled? || finished?
+          # The step made arrangements regarding how we shoudl continue, nothing to do
+          logger.info { "has been #{state} inside #{current_step_name}" }
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+        elsif @reattempt_after
+          # The step asked the actions to be attempted at a later time
+          logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
+          set_next_step_and_enqueue(@current_step_definition, wait: @reattempt_after)
+          ready!
+        elsif (next_step_definition = step_definitions[@current_step_definition.seq + 1])
+          logger.info { "will continue to #{next_step_definition.name}" }
+          set_next_step_and_enqueue(next_step_definition)
+          ready!
+        else
+          logger.info { "has finished" } # The hero's journey is complete
+          finished!
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+        end
       end
     ensure
       # The instance variables must not be present if `perform_next_step!` gets called
@@ -268,8 +269,23 @@ module StepperMotor
     def set_next_step_and_enqueue(next_step_definition, wait: nil)
       wait ||= next_step_definition.wait
       next_idempotency_key = SecureRandom.base36(16)
-      update!(previous_step_name: next_step_name, next_step_name: next_step_definition.name, next_step_to_be_performed_at: Time.current + wait, idempotency_key: next_idempotency_key)
-      schedule!
+      next_step_to_be_performed_at = Time.current + wait
+      update_attrs = {
+        previous_step_name: next_step_name,
+        next_step_name: next_step_definition.name,
+        next_step_to_be_performed_at:,
+        idempotency_key: next_idempotency_key,
+        state: "ready"
+      }
+      task_attrs = {
+        scheduled_at: next_step_to_be_performed_at,
+        idempotency_key: next_idempotency_key
+      }
+      transaction do
+        update!(**update_attrs)
+        via_transactional_task = scheduled_tasks.create!(**task_attrs)
+        StepperMotor.scheduler.schedule(self, via_transactional_task)
+      end
     end
 
     def logger
@@ -293,10 +309,6 @@ module StepperMotor
     end
 
     def after_performing_step_without_exception(step_name)
-    end
-
-    def schedule!
-      StepperMotor.scheduler.schedule(self)
     end
   end
 end

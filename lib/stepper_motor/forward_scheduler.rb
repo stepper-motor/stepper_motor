@@ -18,9 +18,13 @@
 # struggle a bit if the queue contains a large number of jobs (even if those jobs are not yet
 # scheduled to be performed). For good_job the {CyclicScheduler} is also likely to be a better option.
 class StepperMotor::ForwardScheduler
-  def schedule(journey)
-    StepperMotor::PerformStepJob
+  def schedule(journey, via_task)
+    enqueued_job = StepperMotor::PerformStepJob
       .set(wait_until: journey.next_step_to_be_performed_at)
       .perform_later(journey_id: journey.id, journey_class_name: journey.class.to_s, idempotency_key: journey.idempotency_key)
+
+    if enqueued_job.job_id
+      via_task.update!(active_job_id: enqueued_job.job_id.to_s)
+    end
   end
 end

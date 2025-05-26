@@ -21,8 +21,8 @@ module StepperMotor::Journey::Recovery
     when :reattempt
       with_lock do
         return unless performing?
-        ready!
-        schedule!
+        next_step = lookup_step_definition(next_step_name)
+        set_next_step_and_enqueue(next_step, wait: 0)
       end
     else
       with_lock do
