@@ -54,7 +54,7 @@ class StepperMotor::CyclicScheduler < StepperMotor::ForwardScheduler
     end
   end
 
-  def schedule(journey)
+  def schedule(journey, via_task)
     # We assume that the previous `run_scheduling_cycle` has occured recently. The longest time it will take
     # until the next `run_scheduling_cycle` is the duration of the cycle (`run_scheduling_cycle` did run
     # just before `schedule` gets called). Therefore, it should be sufficient to assume that if the step
