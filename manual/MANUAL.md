@@ -1,14 +1,3 @@
-
-## Installation
-
-Add the gem to the application's Gemfile, and then generate and run the migration
-
-    $ bundle add stepper_motor
-    $ bundle install
-    $ bin/rails g stepper_motor:install --uuid # Pass "uuid" if you are using UUID for your primary and foreign keys
-    $ bin/rails db:migrate
-
-
 ## Intro
 
 `stepper_motor` solves a real, tangible problem in Rails apps - tracking activities over long periods of time. It does so in a durable, reentrant and consistent manner, utilizing the guarantees provided by your relational database you already have.
