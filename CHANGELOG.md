@@ -41,7 +41,6 @@
 - Refactor PerformStepJob to use Journey class in job arguments
 - Remove GlobalID dependency
 - Add ability to resolve Journey from base class using `find()`
-- Prepare groundwork for future improvements (https://github.com/stepper-motor/stepper_motor/pull/12)
 
 ## [0.1.4] - 2025-03-11
 
