@@ -51,8 +51,8 @@ module StepperMotor::Journey::FlowControl
     raise "resume! can only be used outside of a step" if @current_step_definition
     with_lock do
       raise "The #{self.class} to resume must be in the `paused' state, but was in #{state.inspect}" unless paused?
-      update!(state: "ready", idempotency_key: SecureRandom.base36(16))
-      schedule!
+      next_step = lookup_step_definition(next_step_name)
+      set_next_step_and_enqueue(next_step, wait: 0)
     end
   end
 end
