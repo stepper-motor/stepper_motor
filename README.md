@@ -24,7 +24,7 @@ end
 SignupJourney.create!(hero: current_user)
 ```
 
-Want to know more? Dive into the [manual](file.MANUAL.html) we provide.
+Want to know more? Dive into the [manual](/manual/MANUAL.md) we provide.
 
 ## Installation
 
