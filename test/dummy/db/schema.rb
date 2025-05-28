@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2025_05_25_132526) do
+ActiveRecord::Schema[7.2].define(version: 2025_05_28_141038) do
   create_table "stepper_motor_journeys", force: :cascade do |t|
     t.string "type", null: false
     t.string "state", default: "ready"

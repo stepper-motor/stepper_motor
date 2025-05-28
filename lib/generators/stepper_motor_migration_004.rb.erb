@@ -7,7 +7,7 @@ class StepperMotorMigration004 < ActiveRecord::Migration[<%= migration_version %
               name: :idx_journeys_one_per_hero_with_paused
 
     # Remove old indexes that only include 'ready' state
-    remove_index :stepper_motor_journeys, [:type, :hero_id, :hero_type], name: :one_per_hero_index, where: "allow_multiple = '0' AND state IN ('ready', 'performing')", algorithm: :concurrently 
+    remove_index :stepper_motor_journeys, [:type, :hero_id, :hero_type], name: :one_per_hero_index, where: "allow_multiple = '0' AND state IN ('ready', 'performing')" 
   end
 
   def down
@@ -19,6 +19,6 @@ class StepperMotorMigration004 < ActiveRecord::Migration[<%= migration_version %
               name: :one_per_hero_index
 
     # Remove new indexes
-    remove_index :stepper_motor_journeys, name: :idx_journeys_one_per_hero_with_paused, algorithm: :concurrently
+    remove_index :stepper_motor_journeys, name: :idx_journeys_one_per_hero_with_paused
   end
 end
