@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.10] - 2025-05-28
+
+- Remove `algorithm: :concurrently` from migrations. If a user needs to conform with strong_migrations
+  they can always edit the migration themselves.
+
 ## [0.1.9] - 2025-05-25
 
 - Repair bodged migration from the previous release
