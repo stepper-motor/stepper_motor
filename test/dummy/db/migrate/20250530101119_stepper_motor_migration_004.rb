@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 class StepperMotorMigration004 < ActiveRecord::Migration[7.2]
   def up
     quoted_false = connection.quote(false)
