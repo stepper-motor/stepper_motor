@@ -48,7 +48,7 @@ module StepperMotor
     class_attribute :step_definitions, default: []
 
     belongs_to :hero, polymorphic: true, optional: true
-    has_many :scheduled_tasks, class_name: "StepperMotor::ScheduledTask", dependent: :delete_all
+    has_many :task_handles, class_name: "StepperMotor::TaskHandle", dependent: :delete_all
 
     STATES = %w[ready paused performing canceled finished]
     enum :state, STATES.zip(STATES).to_h, default: "ready"
@@ -283,7 +283,7 @@ module StepperMotor
       }
       transaction do
         update!(**update_attrs)
-        via_transactional_task = scheduled_tasks.create!(**task_attrs)
+        via_transactional_task = task_handles.create!(**task_attrs)
         StepperMotor.scheduler.schedule(self, via_transactional_task)
       end
     end

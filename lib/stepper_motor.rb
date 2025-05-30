@@ -12,7 +12,7 @@ module StepperMotor
   class StepConfigurationError < ArgumentError; end
 
   autoload :Journey, File.dirname(__FILE__) + "/stepper_motor/journey.rb"
-  autoload :ScheduledTask, File.dirname(__FILE__) + "/stepper_motor/scheduled_task.rb"
+  autoload :TaskHandle, File.dirname(__FILE__) + "/stepper_motor/task_handle.rb"
   autoload :Step, File.dirname(__FILE__) + "/stepper_motor/step.rb"
 
   autoload :BaseJob, File.dirname(__FILE__) + "/stepper_motor/base_job.rb"

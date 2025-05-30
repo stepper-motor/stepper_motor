@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 class StepperMotorMigration001 < ActiveRecord::Migration[7.2]
   def change
     
