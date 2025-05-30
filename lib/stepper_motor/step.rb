@@ -22,8 +22,10 @@ class StepperMotor::Step
   # @param wait[Numeric,ActiveSupport::Duration] the amount of time to wait before entering the step
   # @param on_exception[Symbol] the action to take if an exception occurs when performing the step.
   #   The possible values are:
-  #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
-  #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+  #   * `:cancel!` - cancels the Journey and re-raises the exception.
+  #   * `:reattempt!` - reattempts the Journey and re-raises the exception.
+  #   * `:pause!` - pauses the Journey for investigation and re-raises the exception.
+  #   The Journey will be persisted before re-raising the exception in all these cases.
   def initialize(name:, seq:, on_exception:, wait: 0, &step_block)
     @step_block = step_block
     @name = name.to_s
