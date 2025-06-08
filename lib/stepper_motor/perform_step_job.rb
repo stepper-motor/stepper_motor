@@ -2,7 +2,7 @@
 
 require "active_job"
 
-class StepperMotor::PerformStepJob < ActiveJob::Base
+class StepperMotor::PerformStepJob < StepperMotor::BaseJob
   def perform(*posargs, **kwargs)
     if posargs.length == 1 && kwargs.empty?
       perform_via_journey_gid(*posargs)

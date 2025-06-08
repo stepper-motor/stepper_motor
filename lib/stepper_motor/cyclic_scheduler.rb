@@ -21,7 +21,7 @@
 #
 # The scheduler needs to be configured in your cron table.
 class StepperMotor::CyclicScheduler < StepperMotor::ForwardScheduler
-  class RunSchedulingCycleJob < ActiveJob::Base
+  class RunSchedulingCycleJob < StepperMotor::BaseJob
     def perform
       scheduler = StepperMotor.scheduler
       return unless scheduler.is_a?(StepperMotor::CyclicScheduler)

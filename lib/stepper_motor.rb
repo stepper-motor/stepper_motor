@@ -14,6 +14,7 @@ module StepperMotor
   autoload :Journey, File.dirname(__FILE__) + "/stepper_motor/journey.rb"
   autoload :Step, File.dirname(__FILE__) + "/stepper_motor/step.rb"
 
+  autoload :BaseJob, File.dirname(__FILE__) + "/stepper_motor/base_job.rb"
   autoload :PerformStepJob, File.dirname(__FILE__) + "/stepper_motor/perform_step_job.rb"
   autoload :PerformStepJobV2, File.dirname(__FILE__) + "/stepper_motor/perform_step_job.rb"
   autoload :HousekeepingJob, File.dirname(__FILE__) + "/stepper_motor/housekeeping_job.rb"
@@ -28,4 +29,9 @@ module StepperMotor
 
   mattr_accessor :scheduler, default: ForwardScheduler.new
   mattr_accessor :delete_completed_journeys_after, default: 30.days
+
+  # Extends the BaseJob of the library with any additional options
+  def self.extend_base_job(&blk)
+    BaseJob.class_eval(&blk)
+  end
 end
