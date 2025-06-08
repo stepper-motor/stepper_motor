@@ -9,7 +9,7 @@
 #
 # and add its cycle job into your recurring jobs table. For example, for solid_queue:
 #
-#   stepper_motor_cycle_scheduler:
+#   run_stepper_motor_scheduling_cycle:
 #     schedule: "*/30 * * * *" # Every 30 minutes
 #     class: "StepperMotor::CyclicScheduler::RunSchedulingCycleJob"
 #
