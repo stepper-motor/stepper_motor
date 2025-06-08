@@ -30,3 +30,11 @@ StepperMotor.scheduler = StepperMotor::ForwardScheduler.new
 #     schedule: "*/30 * * * *" # Every 30 minutes
 #     class: "StepperMotor::HousekeepingJob"
 StepperMotor.delete_completed_journeys_after = 30.days
+
+# Extends the base StepperMotor ActiveJob with any calls you would use to customise a
+# job in your codebase. At the minimum, we recommend setting all StepperMotor job priorities
+# to "high" - according to the priority denomination you are using.
+# StepperMotor.extend_base_job do
+#   priority :high
+#   discard_on ActiveRecord::NotFound
+# end
