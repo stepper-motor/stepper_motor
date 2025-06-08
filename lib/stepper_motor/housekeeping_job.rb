@@ -2,7 +2,7 @@
 
 class StepperMotor::HousekeepingJob < ActiveJob::Base
   def perform(**)
-    SteperMotor::RecoverStuckJourneysJob.perform_later
-    SteperMotor::DeleteCompletedJourneysJob.perform_later
+    StepperMotor::RecoverStuckJourneysJob.perform_later
+    StepperMotor::DeleteCompletedJourneysJob.perform_later
   end
 end
