@@ -35,6 +35,6 @@ StepperMotor.delete_completed_journeys_after = 30.days
 # job in your codebase. At the minimum, we recommend setting all StepperMotor job priorities
 # to "high" - according to the priority denomination you are using.
 # StepperMotor.extend_base_job do
-#   priority :high
+#   queue_with_priority :high
 #   discard_on ActiveRecord::NotFound
 # end
