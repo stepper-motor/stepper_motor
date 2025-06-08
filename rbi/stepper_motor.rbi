@@ -334,8 +334,8 @@ module StepperMotor
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
     UUID_MESSAGE = T.let(<<~MSG, T.untyped)
-  If set, uuid type will be used for hero_id. Use this
-  if most of your models use UUD as primary key"
+  If set, uuid type will be used for hero_id of the Journeys, as well as for the Journey IDs.
+  Use this if most of your models use UUD as primary key"
 MSG
 
     # sord omit - no YARD return type given, using untyped
