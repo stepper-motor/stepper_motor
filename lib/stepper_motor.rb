@@ -15,7 +15,7 @@ module StepperMotor
   autoload :Step, File.dirname(__FILE__) + "/stepper_motor/step.rb"
 
   autoload :PerformStepJob, File.dirname(__FILE__) + "/stepper_motor/perform_step_job.rb"
-  autoload :PerformStepJobV2, File.dirname(__FILE__) + "/stepper_motor/perform_step_job_v2.rb"
+  autoload :PerformStepJobV2, File.dirname(__FILE__) + "/stepper_motor/perform_step_job.rb"
   autoload :HousekeepingJob, File.dirname(__FILE__) + "/stepper_motor/housekeeping_job.rb"
   autoload :DeleteCompletedJourneysJob, File.dirname(__FILE__) + "/stepper_motor/delete_completed_journeys_job.rb"
   autoload :RecoverStuckJourneysJob, File.dirname(__FILE__) + "/stepper_motor/recover_stuck_journeys_job.rb"

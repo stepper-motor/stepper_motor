@@ -39,7 +39,7 @@ class CyclicSchedulerTest < ActiveSupport::TestCase
     scheduler = StepperMotor::CyclicScheduler.new(cycle_duration: 40.minutes)
     StepperMotor.scheduler = scheduler
 
-    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJobV2 do
+    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJob do
       far_future_journey_class.create!
     end
   end
@@ -54,7 +54,7 @@ class CyclicSchedulerTest < ActiveSupport::TestCase
     end
     journey.update!(next_step_to_be_performed_at: 10.minutes.ago)
 
-    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJobV2 do
+    assert_enqueued_jobs 1, only: StepperMotor::PerformStepJob do
       scheduler.run_scheduling_cycle
     end
   end

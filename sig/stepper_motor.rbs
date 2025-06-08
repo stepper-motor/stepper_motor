@@ -2,6 +2,8 @@
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
   VERSION: untyped
+  PerformStepJobV2: untyped
+  RecoverStuckJourneysJobV1: untyped
 
   class Error < StandardError
   end
@@ -362,9 +364,20 @@ module StepperMotor
   end
 
   class PerformStepJob < ActiveJob::Base
+    # sord omit - no YARD type given for "*posargs", using untyped
+    # sord omit - no YARD type given for "**kwargs", using untyped
+    # sord omit - no YARD return type given, using untyped
+    def perform: (*untyped posargs, **untyped kwargs) -> untyped
+
     # sord omit - no YARD type given for "journey_gid", using untyped
     # sord omit - no YARD return type given, using untyped
-    def perform: (untyped journey_gid) -> untyped
+    def perform_via_journey_gid: (untyped journey_gid) -> untyped
+
+    # sord omit - no YARD type given for "journey_id:", using untyped
+    # sord omit - no YARD type given for "journey_class_name:", using untyped
+    # sord omit - no YARD type given for "idempotency_key:", using untyped
+    # sord omit - no YARD return type given, using untyped
+    def perform_via_kwargs: (journey_id: untyped, journey_class_name: untyped, ?idempotency_key: untyped) -> untyped
   end
 
   # The forward scheduler enqueues a job for every Journey that
@@ -388,14 +401,6 @@ module StepperMotor
     # sord omit - no YARD type given for "journey", using untyped
     # sord omit - no YARD return type given, using untyped
     def schedule: (untyped journey) -> untyped
-  end
-
-  class PerformStepJobV2 < ActiveJob::Base
-    # sord omit - no YARD type given for "journey_id:", using untyped
-    # sord omit - no YARD type given for "journey_class_name:", using untyped
-    # sord omit - no YARD type given for "idempotency_key:", using untyped
-    # sord omit - no YARD return type given, using untyped
-    def perform: (journey_id: untyped, journey_class_name: untyped, ?idempotency_key: untyped) -> untyped
   end
 
   # The purpose of this job is to find journeys which have, for whatever reason, remained in the

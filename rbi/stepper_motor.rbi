@@ -3,6 +3,8 @@
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
   VERSION = T.let("0.1.10", T.untyped)
+  PerformStepJobV2 = T.let(StepperMotor::PerformStepJob, T.untyped)
+  RecoverStuckJourneysJobV1 = T.let(StepperMotor::RecoverStuckJourneysJob, T.untyped)
 
   class Error < StandardError
   end
@@ -411,10 +413,23 @@ MSG
   end
 
   class PerformStepJob < ActiveJob::Base
+    # sord omit - no YARD type given for "*posargs", using untyped
+    # sord omit - no YARD type given for "**kwargs", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(posargs: T.untyped, kwargs: T.untyped).returns(T.untyped) }
+    def perform(*posargs, **kwargs); end
+
     # sord omit - no YARD type given for "journey_gid", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(journey_gid: T.untyped).returns(T.untyped) }
-    def perform(journey_gid); end
+    def perform_via_journey_gid(journey_gid); end
+
+    # sord omit - no YARD type given for "journey_id:", using untyped
+    # sord omit - no YARD type given for "journey_class_name:", using untyped
+    # sord omit - no YARD type given for "idempotency_key:", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(journey_id: T.untyped, journey_class_name: T.untyped, idempotency_key: T.untyped).returns(T.untyped) }
+    def perform_via_kwargs(journey_id:, journey_class_name:, idempotency_key: nil); end
   end
 
   # The forward scheduler enqueues a job for every Journey that
@@ -439,15 +454,6 @@ MSG
     # sord omit - no YARD return type given, using untyped
     sig { params(journey: T.untyped).returns(T.untyped) }
     def schedule(journey); end
-  end
-
-  class PerformStepJobV2 < ActiveJob::Base
-    # sord omit - no YARD type given for "journey_id:", using untyped
-    # sord omit - no YARD type given for "journey_class_name:", using untyped
-    # sord omit - no YARD type given for "idempotency_key:", using untyped
-    # sord omit - no YARD return type given, using untyped
-    sig { params(journey_id: T.untyped, journey_class_name: T.untyped, idempotency_key: T.untyped).returns(T.untyped) }
-    def perform(journey_id:, journey_class_name:, idempotency_key: nil); end
   end
 
   # The purpose of this job is to find journeys which have, for whatever reason, remained in the

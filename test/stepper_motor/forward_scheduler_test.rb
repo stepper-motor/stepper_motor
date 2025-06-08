@@ -31,7 +31,7 @@ class ForwardSchedulerTest < ActiveSupport::TestCase
     assert_equal 1, enqueued_jobs.size
     job = enqueued_jobs.first
 
-    assert_equal "StepperMotor::PerformStepJobV2", job["job_class"]
+    assert_equal "StepperMotor::PerformStepJob", job["job_class"]
     assert_not_nil job["scheduled_at"]
 
     scheduled_at = Time.parse(job["scheduled_at"])
