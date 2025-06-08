@@ -9,8 +9,8 @@ module StepperMotor
   # Run it with `bin/rails g stepper_motor:install` in your console.
   class InstallGenerator < Rails::Generators::Base
     UUID_MESSAGE = <<~MSG
-      If set, uuid type will be used for hero_id. Use this
-      if most of your models use UUD as primary key"
+      If set, uuid type will be used for hero_id of the Journeys, as well as for the Journey IDs.
+      Use this if most of your models use UUD as primary key"
     MSG
 
     include ActiveRecord::Generators::Migration
@@ -31,9 +31,9 @@ module StepperMotor
     end
 
     def create_initializer
-      create_file "config/initializers/stepper_motor.rb", <<~RUBY
-        StepperMotor.scheduler = StepperMotor::ForwardScheduler.new
-      RUBY
+      # Take the initializer code from the test dummy app, it is the best place really.
+      initializer_code_from_dummy_app = File.read(__dir__ + "/../../test/dummy/config/initializers/stepper_motor.rb")
+      create_file "config/initializers/stepper_motor.rb", initializer_code_from_dummy_app
     end
 
     private

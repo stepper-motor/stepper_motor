@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "active_job"
-
 class StepperMotor::PerformStepJobV2 < ActiveJob::Base
   def perform(journey_id:, journey_class_name:, idempotency_key: nil, **)
     journey = StepperMotor::Journey.find(journey_id)

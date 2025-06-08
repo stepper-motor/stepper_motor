@@ -52,12 +52,12 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     assert journey_to_cancel.reload.performing?
     assert journey_to_reattempt.reload.performing?
 
-    StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+    StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
     assert journey_to_cancel.reload.performing?
     assert journey_to_reattempt.reload.performing?
 
     travel_to Time.now + 2.days + 1.second
-    StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+    StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
 
     assert journey_to_cancel.reload.canceled?
     assert journey_to_reattempt.reload.ready?
@@ -83,7 +83,7 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     journey_to_cancel.class.update_all(type: "UnknownJourneySubclass")
 
     assert_nothing_raised do
-      StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+      StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
     end
   end
 end

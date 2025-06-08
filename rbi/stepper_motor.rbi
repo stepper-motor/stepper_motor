@@ -404,6 +404,12 @@ MSG
     end
   end
 
+  class HousekeepingJob < ActiveJob::Base
+    # sord omit - no YARD return type given, using untyped
+    sig { returns(T.untyped) }
+    def perform; end
+  end
+
   class PerformStepJob < ActiveJob::Base
     # sord omit - no YARD type given for "journey_gid", using untyped
     # sord omit - no YARD return type given, using untyped
@@ -448,12 +454,21 @@ MSG
   # `performing` state for far longer than the journey is supposed to. At the moment it assumes
   # any journey that stayed in `performing` for longer than 1 hour has hung. Add this job to your
   # cron table and perform it regularly.
-  class RecoverStuckJourneysJobV1 < ActiveJob::Base
+  class RecoverStuckJourneysJob < ActiveJob::Base
     DEFAULT_STUCK_FOR = T.let(2.days, T.untyped)
 
     # sord omit - no YARD type given for "stuck_for:", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(stuck_for: T.untyped).returns(T.untyped) }
     def perform(stuck_for: DEFAULT_STUCK_FOR); end
+  end
+
+  # The purpose of this job is to find journeys which have completed (finished or canceled) some
+  # time ago and to delete them. The time is configured in the initializer.
+  class DeleteCompletedJourneysJob < ActiveJob::Base
+    # sord omit - no YARD type given for "completed_for:", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(completed_for: T.untyped).returns(T.untyped) }
+    def perform(completed_for: StepperMotor.delete_completed_journeys_after); end
   end
 end
