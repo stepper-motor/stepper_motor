@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.11] - 2025-06-08
+
+- Add automatic cleanup of completed journeys after a configurable time period
+- Add `HousekeepingJob` to run cleanup and recovery tasks
+- Add ability to extend all StepperMotor jobs with custom configuration
+- Merge V2/V1 job variants into single classes with backward compatibility
+- Pin standardrb version to avoid Rubocop errors
+- Improve documentation and test coverage
+
 ## [0.1.10] - 2025-05-28
 
 - Remove `algorithm: :concurrently` from migrations. If a user needs to conform with strong_migrations
