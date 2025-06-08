@@ -388,7 +388,7 @@ If you use in-time scheduling you will need to add the `StepperMotor::ScheduleLo
 
 ## Naming steps
 
-stepper_motor will name steps for you. However, using named steps is useful because you then can insert steps between existing ones, and have your `Journey` correctly identify the right step. Steps are performed in the order they are defined. Imagine you start with this step sequence:
+Naming your steps is useful because you then can then update your code and insert steps between the existing ones, and have your `Journey` correctly identify the right step. Steps are performed in the order they are defined. Imagine you start with this step sequence:
 
 ```ruby
 step :one do
@@ -421,7 +421,43 @@ Your existing `Journey` is already primed to perform step `two`. However, a `Jou
 So, rules of thumb:
 
 * When steps are recalled to be performed, they get recalled _by name._
-* When preparing for the next step, _the next step from the current in order of definition_ is going to be used.
+* When preparing for the next step or skipping to the next step, _the next step from the current in order of definition_ is going to be used.
+
+## Using anonymous steps
+
+Not naming steps can be useful as well. stepper_motor will automatically assign numbered names (`step_1`, `step_2` and so forth) to your steps that do not get a name. While not naming steps does not give you that much flexibility, it can be very useful for setting up a polling workflow with a decaying cadence. For example:
+
+```ruby
+class PollStatusJourney < StepperMotor::Journey
+  alias_method :payment, :hero
+
+  step { verify_status! }
+
+  # Then after 5 minutes
+  step(wait: 5.minutes) { verify_status! }
+
+  # Check every 2 hours after
+  12.times do
+    step(wait: 2.hours) { verify_status! }
+  end
+
+  # Check once a day after that
+  7.times do
+    step(wait: 1.day) { verify_status! }
+  end
+
+  step :terminate do
+    payment.failed!
+  end
+
+  def verify_status!
+    status = payment.current_status
+    finished! if status.complete?
+  end
+end
+```
+
+This makes the definition very compact.
 
 ## Using instance methods as steps
 
@@ -460,6 +496,7 @@ class Erasure < StepperMotor::Journey
   end
 end
 ```
+
 ## Exception handling inside steps
 
 > [!IMPORTANT]
