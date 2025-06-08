@@ -19,6 +19,7 @@ module StepperMotor
   autoload :HousekeepingJob, File.dirname(__FILE__) + "/stepper_motor/housekeeping_job.rb"
   autoload :DeleteCompletedJourneysJob, File.dirname(__FILE__) + "/stepper_motor/delete_completed_journeys_job.rb"
   autoload :RecoverStuckJourneysJob, File.dirname(__FILE__) + "/stepper_motor/recover_stuck_journeys_job.rb"
+  autoload :RecoverStuckJourneysJobV1, File.dirname(__FILE__) + "/stepper_motor/recover_stuck_journeys_job.rb"
 
   autoload :InstallGenerator, File.dirname(__FILE__) + "/generators/install_generator.rb"
   autoload :ForwardScheduler, File.dirname(__FILE__) + "/stepper_motor/forward_scheduler.rb"

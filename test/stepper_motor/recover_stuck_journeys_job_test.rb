@@ -7,6 +7,11 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     StepperMotor::Journey.delete_all
   end
 
+  test "still has the previous job class name available to allow older jobs to be unserialized" do
+    assert defined?(StepperMotor::RecoverStuckJourneysJobV1)
+    assert_equal StepperMotor::RecoverStuckJourneysJob, StepperMotor::RecoverStuckJourneysJobV1
+  end
+
   test "handles recovery from a background job" do
     stuck_journey_class1 = create_journey_subclass do
       self.when_stuck = :cancel

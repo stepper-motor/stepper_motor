@@ -15,3 +15,6 @@ class StepperMotor::RecoverStuckJourneysJob < ActiveJob::Base
     end
   end
 end
+
+# Alias for the previous job name
+StepperMotor::RecoverStuckJourneysJobV1 = StepperMotor::RecoverStuckJourneysJob
