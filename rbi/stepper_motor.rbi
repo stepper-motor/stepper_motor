@@ -2,7 +2,7 @@
 # StepperMotor is a module for building multi-step flows where steps are sequential and only
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
-  VERSION = T.let("0.1.10", T.untyped)
+  VERSION = T.let("0.1.11", T.untyped)
   PerformStepJobV2 = T.let(StepperMotor::PerformStepJob, T.untyped)
   RecoverStuckJourneysJobV1 = T.let(StepperMotor::RecoverStuckJourneysJob, T.untyped)
 
@@ -311,6 +311,9 @@ module StepperMotor
   class Railtie < Rails::Railtie
   end
 
+  # All StepperMotor job classes inherit from this one. It is available for
+  # extension from StepperMotor.extend_base_job_class so that you can set
+  # priority, include and prepend modules and so forth.
   class BaseJob < ActiveJob::Base
   end
 
