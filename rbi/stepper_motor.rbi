@@ -306,6 +306,9 @@ module StepperMotor
   class Railtie < Rails::Railtie
   end
 
+  class BaseJob < ActiveJob::Base
+  end
+
   module TestHelper
     # Allows running a given Journey to completion, skipping across the waiting periods.
     # This is useful to evaluate all side effects of a Journey. The helper will ensure
@@ -399,20 +402,20 @@ MSG
     sig { params(journey: T.untyped).returns(T.untyped) }
     def schedule(journey); end
 
-    class RunSchedulingCycleJob < ActiveJob::Base
+    class RunSchedulingCycleJob < StepperMotor::BaseJob
       # sord omit - no YARD return type given, using untyped
       sig { returns(T.untyped) }
       def perform; end
     end
   end
 
-  class HousekeepingJob < ActiveJob::Base
+  class HousekeepingJob < StepperMotor::BaseJob
     # sord omit - no YARD return type given, using untyped
     sig { returns(T.untyped) }
     def perform; end
   end
 
-  class PerformStepJob < ActiveJob::Base
+  class PerformStepJob < StepperMotor::BaseJob
     # sord omit - no YARD type given for "*posargs", using untyped
     # sord omit - no YARD type given for "**kwargs", using untyped
     # sord omit - no YARD return type given, using untyped
@@ -460,7 +463,7 @@ MSG
   # `performing` state for far longer than the journey is supposed to. At the moment it assumes
   # any journey that stayed in `performing` for longer than 1 hour has hung. Add this job to your
   # cron table and perform it regularly.
-  class RecoverStuckJourneysJob < ActiveJob::Base
+  class RecoverStuckJourneysJob < StepperMotor::BaseJob
     DEFAULT_STUCK_FOR = T.let(2.days, T.untyped)
 
     # sord omit - no YARD type given for "stuck_for:", using untyped
@@ -471,7 +474,7 @@ MSG
 
   # The purpose of this job is to find journeys which have completed (finished or canceled) some
   # time ago and to delete them. The time is configured in the initializer.
-  class DeleteCompletedJourneysJob < ActiveJob::Base
+  class DeleteCompletedJourneysJob < StepperMotor::BaseJob
     # sord omit - no YARD type given for "completed_for:", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(completed_for: T.untyped).returns(T.untyped) }
