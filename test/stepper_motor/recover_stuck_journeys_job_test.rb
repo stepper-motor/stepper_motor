@@ -7,6 +7,11 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     StepperMotor::Journey.delete_all
   end
 
+  test "still has the previous job class name available to allow older jobs to be unserialized" do
+    assert defined?(StepperMotor::RecoverStuckJourneysJobV1)
+    assert_equal StepperMotor::RecoverStuckJourneysJob, StepperMotor::RecoverStuckJourneysJobV1
+  end
+
   test "handles recovery from a background job" do
     stuck_journey_class1 = create_journey_subclass do
       self.when_stuck = :cancel
@@ -52,12 +57,12 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     assert journey_to_cancel.reload.performing?
     assert journey_to_reattempt.reload.performing?
 
-    StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+    StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
     assert journey_to_cancel.reload.performing?
     assert journey_to_reattempt.reload.performing?
 
     travel_to Time.now + 2.days + 1.second
-    StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+    StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
 
     assert journey_to_cancel.reload.canceled?
     assert journey_to_reattempt.reload.ready?
@@ -83,7 +88,7 @@ class RecoverStuckJourneysJobTest < ActiveSupport::TestCase
     journey_to_cancel.class.update_all(type: "UnknownJourneySubclass")
 
     assert_nothing_raised do
-      StepperMotor::RecoverStuckJourneysJobV1.perform_now(stuck_for: 2.days)
+      StepperMotor::RecoverStuckJourneysJob.perform_now(stuck_for: 2.days)
     end
   end
 end

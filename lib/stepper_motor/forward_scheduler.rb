@@ -19,7 +19,7 @@
 # scheduled to be performed). For good_job the {CyclicScheduler} is also likely to be a better option.
 class StepperMotor::ForwardScheduler
   def schedule(journey)
-    StepperMotor::PerformStepJobV2
+    StepperMotor::PerformStepJob
       .set(wait_until: journey.next_step_to_be_performed_at)
       .perform_later(journey_id: journey.id, journey_class_name: journey.class.to_s, idempotency_key: journey.idempotency_key)
   end

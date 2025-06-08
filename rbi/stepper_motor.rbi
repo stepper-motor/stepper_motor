@@ -3,6 +3,8 @@
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
   VERSION = T.let("0.1.10", T.untyped)
+  PerformStepJobV2 = T.let(StepperMotor::PerformStepJob, T.untyped)
+  RecoverStuckJourneysJobV1 = T.let(StepperMotor::RecoverStuckJourneysJob, T.untyped)
 
   class Error < StandardError
   end
@@ -334,8 +336,8 @@ module StepperMotor
   class InstallGenerator < Rails::Generators::Base
     include ActiveRecord::Generators::Migration
     UUID_MESSAGE = T.let(<<~MSG, T.untyped)
-  If set, uuid type will be used for hero_id. Use this
-  if most of your models use UUD as primary key"
+  If set, uuid type will be used for hero_id of the Journeys, as well as for the Journey IDs.
+  Use this if most of your models use UUD as primary key"
 MSG
 
     # sord omit - no YARD return type given, using untyped
@@ -404,11 +406,30 @@ MSG
     end
   end
 
+  class HousekeepingJob < ActiveJob::Base
+    # sord omit - no YARD return type given, using untyped
+    sig { returns(T.untyped) }
+    def perform; end
+  end
+
   class PerformStepJob < ActiveJob::Base
+    # sord omit - no YARD type given for "*posargs", using untyped
+    # sord omit - no YARD type given for "**kwargs", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(posargs: T.untyped, kwargs: T.untyped).returns(T.untyped) }
+    def perform(*posargs, **kwargs); end
+
     # sord omit - no YARD type given for "journey_gid", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(journey_gid: T.untyped).returns(T.untyped) }
-    def perform(journey_gid); end
+    def perform_via_journey_gid(journey_gid); end
+
+    # sord omit - no YARD type given for "journey_id:", using untyped
+    # sord omit - no YARD type given for "journey_class_name:", using untyped
+    # sord omit - no YARD type given for "idempotency_key:", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(journey_id: T.untyped, journey_class_name: T.untyped, idempotency_key: T.untyped).returns(T.untyped) }
+    def perform_via_kwargs(journey_id:, journey_class_name:, idempotency_key: nil); end
   end
 
   # The forward scheduler enqueues a job for every Journey that
@@ -435,25 +456,25 @@ MSG
     def schedule(journey); end
   end
 
-  class PerformStepJobV2 < ActiveJob::Base
-    # sord omit - no YARD type given for "journey_id:", using untyped
-    # sord omit - no YARD type given for "journey_class_name:", using untyped
-    # sord omit - no YARD type given for "idempotency_key:", using untyped
-    # sord omit - no YARD return type given, using untyped
-    sig { params(journey_id: T.untyped, journey_class_name: T.untyped, idempotency_key: T.untyped).returns(T.untyped) }
-    def perform(journey_id:, journey_class_name:, idempotency_key: nil); end
-  end
-
   # The purpose of this job is to find journeys which have, for whatever reason, remained in the
   # `performing` state for far longer than the journey is supposed to. At the moment it assumes
   # any journey that stayed in `performing` for longer than 1 hour has hung. Add this job to your
   # cron table and perform it regularly.
-  class RecoverStuckJourneysJobV1 < ActiveJob::Base
+  class RecoverStuckJourneysJob < ActiveJob::Base
     DEFAULT_STUCK_FOR = T.let(2.days, T.untyped)
 
     # sord omit - no YARD type given for "stuck_for:", using untyped
     # sord omit - no YARD return type given, using untyped
     sig { params(stuck_for: T.untyped).returns(T.untyped) }
     def perform(stuck_for: DEFAULT_STUCK_FOR); end
+  end
+
+  # The purpose of this job is to find journeys which have completed (finished or canceled) some
+  # time ago and to delete them. The time is configured in the initializer.
+  class DeleteCompletedJourneysJob < ActiveJob::Base
+    # sord omit - no YARD type given for "completed_for:", using untyped
+    # sord omit - no YARD return type given, using untyped
+    sig { params(completed_for: T.untyped).returns(T.untyped) }
+    def perform(completed_for: StepperMotor.delete_completed_journeys_after); end
   end
 end
