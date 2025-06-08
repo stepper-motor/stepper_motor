@@ -6,6 +6,11 @@ module StepperMotor
   PerformStepJobV2 = T.let(StepperMotor::PerformStepJob, T.untyped)
   RecoverStuckJourneysJobV1 = T.let(StepperMotor::RecoverStuckJourneysJob, T.untyped)
 
+  # sord omit - no YARD return type given, using untyped
+  # Extends the BaseJob of the library with any additional options
+  sig { params(blk: T.untyped).returns(T.untyped) }
+  def self.extend_base_job(&blk); end
+
   class Error < StandardError
   end
 

@@ -5,6 +5,10 @@ module StepperMotor
   PerformStepJobV2: untyped
   RecoverStuckJourneysJobV1: untyped
 
+  # sord omit - no YARD return type given, using untyped
+  # Extends the BaseJob of the library with any additional options
+  def self.extend_base_job: () -> untyped
+
   class Error < StandardError
   end
 
