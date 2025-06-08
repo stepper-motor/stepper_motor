@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.12] - 2025-06-08
+
+- Ensure base job extension gets done via the reloader, so that app classes are available
+
 ## [0.1.11] - 2025-06-08
 
 - Add automatic cleanup of completed journeys after a configurable time period

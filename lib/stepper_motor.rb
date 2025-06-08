@@ -32,6 +32,8 @@ module StepperMotor
 
   # Extends the BaseJob of the library with any additional options
   def self.extend_base_job(&blk)
-    BaseJob.class_eval(&blk)
+    ActiveSupport::Reloader.to_prepare do
+      BaseJob.class_eval(&blk)
+    end
   end
 end
