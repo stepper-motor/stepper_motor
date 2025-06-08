@@ -465,23 +465,35 @@ end
 > [!IMPORTANT]
 > Exception handling in steps is in flux, expect API changes.
 
-When performing the step, any exceptions raised from within the step will be stored in a local
-variable to allow the Journey to be released as either `ready`, `finished` or `canceled`. The exception
-will be raised from within an `ensure` block after the persistence of the Journey has been taken care of.
-
-By default, an exception raised inside a step of a Journey will _pause_ that Journey. This is done for a number of reasons:
+By default, an exception raised inside a step of a Journey will _pause_ that Journey at that step. This is done for a number of reasons:
 
 * An endlessly reattempting step can cause load on your infrastructure and will never stop retrying
 * Since at the moment there is no configuration for backoff, such a step is likely to hit rate limits on the external resource it hits
 * It is likely a condition that was not anticipated when the Journey was written, thus a blind reattempt is unwise.
 
-While we may change this in future versions of `stepper_motor`, the current default is thus to `pause!` the Journey if an unhandled
-exception occurs. You can, however, switch it to `reattempt!` or `cancel!` a Journey should a particular step raise. This is configured per step:
+While we may change this in future versions of `stepper_motor`, the current default is thus to `pause!` the Journey if an unhandled exception occurs.
+
+Should that happen, you can query for the paused Journeys in your Rails console:
+
+```ruby
+my-app(dev)> StepperMotor::Journey.paused
+```
+
+If a journey has been paused, you can resume it manually from the Rails console once you have investigated and rectified the error. You do so by calling `resume!` on it:
+
+```ruby
+my-app(dev)> journey = StepperMotor::Journey.paused.first!
+my-app(dev)> paused_journey.resume!
+```
+
+This action is deliberately manual. You can also set up a job which automatically resumes paused Journeys, but we do not recommend that as things usually fail for a reason.
+
+If you can make a decision to cancel or reattempt the journey - that's possible as well. This is configured per step:
 
 ```ruby
 class Erasure < StepperMotor::Journey
   step :initiate_deletion, on_exception: :reattempt! do
-    # ..Do the requisite work
+    # ..Do the requisite work with aggressive retries
   end
 end
 ```
@@ -523,5 +535,10 @@ class Payment < StepperMotor::Journey
   end
 end
 ```
+
+It can be helpful to understand how exception handling is done by stepper_motor internally: when performing the step, any exceptions raised from within the step will be stored in a local variable to allow the Journey to be released as `ready`, `finished`, `canceled` or `paused`.
+
+That exception will is then going to be raised from within an `ensure` block, but only after the persistence of the Journey has been taken care of. This way the Journey has way more chance to reach a stable persisted state where it can be recovered (provided the database accepts the write, of course).
+
 
 
