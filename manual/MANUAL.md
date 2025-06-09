@@ -442,6 +442,23 @@ end
 
 The `wait:` parameter defines the amount of time computed **from the moment the Journey gets created or the previous step is completed.**
 
+## Journey states
+
+The Journeys are managed using a state machine, which stepper_motor completely coordinates for you. The states are as follows:
+
+```mermaid
+stateDiagram-v2
+    [*] --> ready: create
+    ready --> performing: perform_next_step!
+    performing --> ready: reattempt!
+    performing --> finished: step completes
+    performing --> canceled: cancel!
+    performing --> paused: pause! or exception
+    paused --> ready: resume!
+    finished --> [*]
+    canceled --> [*]
+```
+
 ## Flow control within steps
 
 Inside a step, you currently can use the following flow control methods:
