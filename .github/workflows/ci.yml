@@ -71,15 +71,17 @@ jobs:
           bundler-cache: true
 
       - name: Remove existing schema.rb
-        run: rm -f db/schema.rb
+        run: rm -f test/dummy/db/schema.rb
 
       - name: Setup database
         env:
           RAILS_ENV: test
           DATABASE_URL: ${{ matrix.database.url }}
         run: |
+          cd test/dummy
           bundle exec rails db:create
           bundle exec rails db:migrate
+          cd ../..
 
       - name: Run tests
         env:

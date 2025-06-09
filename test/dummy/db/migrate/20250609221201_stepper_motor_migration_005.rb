@@ -53,6 +53,6 @@ class StepperMotorMigration005 < ActiveRecord::Migration[7.2]
 
   def mysql?
     adapter = connection.adapter_name.downcase
-    adapter == 'mysql2' || adapter == 'trilogy'
+    adapter == "mysql2" || adapter == "trilogy"
   end
-end 
+end
