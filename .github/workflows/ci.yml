@@ -27,7 +27,7 @@ jobs:
       matrix:
         database:
           - { name: 'PostgreSQL', url: 'postgresql://postgres:postgres@localhost:5432/stepper_motor_test' }
-          - { name: 'MySQL', url: 'mysql2://root:root@localhost:3306/stepper_motor_test' }
+          - { name: 'MySQL', url: 'mysql2://root:root@127.0.0.1:3306/stepper_motor_test?host=127.0.0.1' }
           - { name: 'SQLite', url: 'sqlite3:db/test.sqlite3' }
 
     services:
