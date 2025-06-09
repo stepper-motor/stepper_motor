@@ -1,0 +1,14 @@
+default: &default
+  adapter: postgres
+  database: stepper_motor_dummy_<%= Rails.env %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username: root
+  password: constabulary
+  timeout: 5000
+
+development:
+  <<: *default
+test:
+  <<: *default
+production:
+  <<: *default
