@@ -230,6 +230,65 @@ end
 
 Here, we first initiate a payment using an idempotency key, and then poll for its completion or failure repeatedly. When a payment fails or succeeds, we notify the sender and finish the `Journey`. Note that this `Journey` is of a _payment,_ not of the user. A user may have multiple Payments in flight, each with their own `Journey` being tracket transactionally and correctly.
 
+### Polling with anonymous steps
+
+Here's an example of a Journey that polls an external API for a status update, using anonymous steps with increasing intervals:
+
+```ruby
+class OrderStatusPollingJourney < StepperMotor::Journey
+  alias_method :order, :hero
+
+  # Initial check
+  step do
+    check_status!
+  end
+
+  # Check after 30 seconds
+  step(wait: 30.seconds) do
+    check_status!
+  end
+
+  # Check every minute for 5 minutes
+  5.times do
+    step(wait: 1.minute) do
+      check_status!
+    end
+  end
+
+  # Check every 5 minutes for 30 minutes
+  6.times do
+    step(wait: 5.minutes) do
+      check_status!
+    end
+  end
+
+  # Final check after 1 hour
+  step(wait: 1.hour) do
+    check_status!
+  end
+
+  private
+
+  def check_status!
+    status = ExternalOrderAPI.fetch_status(order.external_id)
+    
+    case status
+    when :completed
+      order.complete!
+      finished!
+    when :failed
+      order.fail!
+      cancel!
+    when :processing
+      # Do nothing, will continue to next step
+    else
+      # Unexpected status, pause for manual investigation
+      pause!
+    end
+  end
+end
+```
+
 ## Flow control within steps
 
 Inside a step, you currently can use the following flow control methods:
