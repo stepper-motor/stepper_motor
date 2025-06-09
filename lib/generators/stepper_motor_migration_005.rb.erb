@@ -1,7 +1,9 @@
 class StepperMotorMigration005 < ActiveRecord::Migration[<%= migration_version %>]
   def up
-    # Return early if not using MySQL
-    return unless mysql?
+    unless mysql?
+      say "Skipping migration as it is only used with MySQL (mysql2 or trilogy)"
+      return
+    end
 
     # Add generated column that combines the state, type, hero_id, and hero_type
     # The column will be NULL if any of the components is NULL
@@ -30,8 +32,10 @@ class StepperMotorMigration005 < ActiveRecord::Migration[<%= migration_version %
   end
 
   def down
-    # Return early if not using MySQL
-    return unless mysql?
+    unless mysql?
+      say "Skipping migration as it is only used with MySQL (mysql2 or trilogy)"
+      return
+    end
 
     # Remove the generated column and its index
     remove_index :stepper_motor_journeys, name: :idx_journeys_one_per_hero_mysql_generated
