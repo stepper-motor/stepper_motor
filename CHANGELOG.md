@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.14] - 2025-06-10
+
+- Since MySQL does not support partial indexes, use a generated column for the uniqueness checks. Other indexes
+  which are set up as partial indexes just become full indexes - that will make them larger on MySQL but the functionality
+  is going to be the same. This is a tradeoff but it seems sensible for the time being.
+
 ## [0.1.12] - 2025-06-08
 
 - Ensure base job extension gets done via the reloader, so that app classes are available
