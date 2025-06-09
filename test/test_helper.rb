@@ -19,12 +19,13 @@ end
 
 module JourneyDefinitionHelper
   def setup
+    super
     @class_names_rng = Random.new(Minitest.seed)
     @dynamic_class_names = Set.new
-    super
   end
 
   def teardown
+    return super unless @dynamic_class_names
     @dynamic_class_names.each do |name|
       Object.send(:remove_const, name)
     end

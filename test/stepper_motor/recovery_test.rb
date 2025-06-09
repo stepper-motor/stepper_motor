@@ -46,14 +46,13 @@ class RecoveryTest < ActiveSupport::TestCase
     travel_to Time.now + 2.days
     assert_includes StepperMotor::Journey.stuck(2.days.ago), journey
 
-    perform_at_before_recovery = journey.next_step_to_be_performed_at
     assert_nothing_raised do
       journey.reload.recover!
     end
 
     journey.reload
-    assert_equal perform_at_before_recovery, journey.next_step_to_be_performed_at
     assert_equal "second", journey.next_step_name
+    assert_equal Time.current, journey.next_step_to_be_performed_at
   end
 
   test "recovers a journey by canceling it" do
