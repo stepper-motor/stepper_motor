@@ -7,6 +7,7 @@ on:
 
 jobs:
   lint:
+    name: "Lint (standardrb)"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,6 +23,7 @@ jobs:
         run: bundle exec standardrb
 
   test:
+    name: "Tests (${{ matrix.database.name }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
