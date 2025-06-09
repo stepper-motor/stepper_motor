@@ -289,6 +289,159 @@ class OrderStatusPollingJourney < StepperMotor::Journey
 end
 ```
 
+## Defining steps
+
+Steps are key building blocks in stepper_motor and can be defined in a number of ways. Rules of thumb:
+
+* When steps are recalled to be performed, they get recalled _by name._
+* When preparing for the next step or skipping to the next step, _the next step from the current in order of definition_ is going to be used.
+* Step names within a Journey subclass must be unique.
+
+stepper_motor will help you follow these rules, so don't worry too much about them just yet.
+
+The step definition is some form of callable block, which is then going to run in the context of this Journey instance (or the Journey subclass' instance)
+
+> [!TIP]
+> Regardless whether the step definition is a method or a block - the step will be `instance_exec`-ed in the context of the Journey instance.
+> Inside the step code you have access to all the methods of the Journey, including instance variables.
+
+### Anonymous steps
+
+The simplest is using anonymous steps and blocks (stepper_motor will generate you step names):
+
+```ruby
+class EraseAccountJourney < StepperMotor::Journey
+  step { hero.datapoints.in_batches.each(&:delete_all) }
+  step { hero.update!(email: "#{Digest::SHA1.hexdigest(hero.email)}@example.com") }
+end
+```
+
+Anonymous steps have a very good use for polling, when you want to define the repeats of the step programmatically. For example:
+
+```ruby
+class PollStatusJourney < StepperMotor::Journey
+  alias_method :payment, :hero
+
+  step { verify_status! }
+
+  # Then after 5 minutes
+  step(wait: 5.minutes) { verify_status! }
+
+  # Check every 2 hours after
+  12.times do
+    step(wait: 2.hours) { verify_status! }
+  end
+
+  # Check once a day after that
+  7.times do
+    step(wait: 1.day) { verify_status! }
+  end
+
+  step :terminate do
+    payment.failed!
+  end
+
+  def verify_status!
+    status = payment.current_status
+    finished! if status.complete?
+  end
+end
+```
+
+### Named steps
+
+You can give the steps names. Step names must be unique and stepper_motor will raise an exception if you reuse a step name:
+
+```ruby
+class EraseAccountJourney < StepperMotor::Journey
+  step :delete_datapoints { hero.datapoints.in_batches.each(&:delete_all) }
+  step :pseudonymize_email { hero.update!(email: "#{Digest::SHA1.hexdigest(hero.email)}@example.com") }
+end
+```
+
+The name of the step is what stepper_motor is going to persist to resume the Journey later. Naming your steps is useful because you then can then update your code and insert steps between the existing ones, and have your `Journey` correctly identify the right step. Steps are performed in the order they are defined. Imagine you start with this step sequence:
+
+```ruby
+step :one do
+  # perform some action
+end
+
+step :two do
+  # perform some other action
+end
+```
+
+You have a `Journey` which is about to start step `one`. When the step gets performed, stepper_motor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
+
+```ruby
+step :one do
+  # perform some action
+end
+
+step :one_bis do
+  # some compliance action
+end
+
+step :two do
+  # perform some other action
+end
+```
+
+Your existing `Journey` is already primed to perform step `two`. However, a `Journey` which is about to perform step `one` will now set `one_bis` as the next step to perform. This allows limited reordering and editing of `Journey` definitions after they have already begun.
+
+### Using instance methods as steps
+
+You can use instance methods of your Journey as steps by passing their name as a symbol to the `step` method:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step :erase_attachments
+  step :erase_emails
+
+  def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
+
+Since a method definition in Ruby returns a Symbol, you can use the return value of the `def` expression
+to define a `step` immediately:
+
+```ruby
+class Erasure < StepperMotor::Journey
+  step def erase_attachments
+    hero.uploaded_attachments.find_each(&:destroy)
+  end
+
+  step def erase_emails
+    while hero.emails.count > 0
+      hero.emails.limit(5000).delete_all
+    end
+  end
+end
+```
+
+### Waiting for the start of the step
+
+You configure how long a step should wait before starting using the `wait:` parameter. The `wait:` can be arbirarily long - but must be finite:
+
+```ruby
+class DraconianPasswordResetJourney < StepperMotor::Journey
+  step :ask_for_password_reset, wait: 6.months do
+    PasswordExpiredMailer.expired(hero).deliver_later
+    reattempt!
+  emd
+end
+```
+
+The `wait:` parameter defines the amount of time computed **from the moment the Journey gets created or the previous step is completed.**
+
 ## Flow control within steps
 
 Inside a step, you currently can use the following flow control methods:
@@ -308,7 +461,6 @@ Inside a step, you currently can use the following flow control methods:
 > `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
 
 You can't call those methods outside of the context of a performing step, and an exception is going to be raised if you do.
-
 
 ## Transactional semantics within steps
 
@@ -332,16 +484,12 @@ We recommend using a "co-committing" ActiveJob adapter with stepper_motor (an ad
 * [good_job](https://github.com/bensheldon/good_job)
 * [solid_queue](https://github.com/rails/solid_queue) - with the same database used for the queue as the one used for Journeys
 
-While Rails core admittedly [insists on the stylistic choice of denying the users the option of co-committing their jobs](https://github.com/rails/rails/pull/53375#issuecomment-2555694252) we find this a highly inconsiderate choice, which has highly negative consequences for a system such as stepper_motor - where durability is paramount. Having good defaults is appropriate, but not removing a crucial affordance that a DB-based job queue provides is downright user-hostile.
+While Rails core admittedly [insists on the stylistic choice of denying the users the option of co-committing their jobs](https://github.com/rails/rails/pull/53375#issuecomment-2555694252) we find this a highly inconsiderate choice. It has negative consequences for a system such as stepper_motor - where durability is paramount. Having good defaults is great, but removing a crucial affordance that a DB-based job queue provides is user-hostile.
 
 In the future, stepper_motor _may_ move to a transactional outbox pattern whereby we emit events into a separate table and whichever queue adapter you have installed will be picking those messages up.
+Note that at the moment - if your ActiveJob adapter enqueues after commit - it is possible for your app to crash _between_ the Journey committing and your job enqueueing.
 
-For its own "trigger" job (the `PerformStepJob` and its versions) stepper_motor is configured to commit it with the Journey state changes, within the same transaction.
-
-This is done for the following reasons:
-
-* Not having the Journey with up-to-date state in teh DB when the job performs will lead to the job silently skipping, which is undesirable
-* But having the app crash between the Journey state committing and the trigger job committing is even less desirable. This would lead to jobs hanging in the `ready` state indefinitly, seemingly at random.
+We may address this in the future using a transactional outbox.
 
 ## Saving side-effects of steps
 
@@ -444,117 +592,6 @@ end
 ```
 
 If you use in-time scheduling you will need to add the `StepperMotor::ScheduleLoopJob` to your cron jobs, and perform it frequently enough. Note that having just the granularity of your cron jobs (minutes) may not be enough as reattempts of the steps may get scheduled with a smaller delay - of a few seconds, for instance.
-
-## Naming steps
-
-Naming your steps is useful because you then can then update your code and insert steps between the existing ones, and have your `Journey` correctly identify the right step. Steps are performed in the order they are defined. Imagine you start with this step sequence:
-
-```ruby
-step :one do
-  # perform some action
-end
-
-step :two do
-  # perform some other action
-end
-```
-
-You have a `Journey` which is about to start step `one`. When the step gets performed, stepper_motor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
-
-```ruby
-step :one do
-  # perform some action
-end
-
-step :one_bis do
-  # some compliance action
-end
-
-step :two do
-  # perform some other action
-end
-```
-
-Your existing `Journey` is already primed to perform step `two`. However, a `Journey` which is about to perform step `one` will now set `one_bis` as the next step to perform. This allows limited reordering and editing of `Journey` definitions after they have already begun.
-
-So, rules of thumb:
-
-* When steps are recalled to be performed, they get recalled _by name._
-* When preparing for the next step or skipping to the next step, _the next step from the current in order of definition_ is going to be used.
-
-## Using anonymous steps
-
-Not naming steps can be useful as well. stepper_motor will automatically assign numbered names (`step_1`, `step_2` and so forth) to your steps that do not get a name. While not naming steps does not give you that much flexibility, it can be very useful for setting up a polling workflow with a decaying cadence. For example:
-
-```ruby
-class PollStatusJourney < StepperMotor::Journey
-  alias_method :payment, :hero
-
-  step { verify_status! }
-
-  # Then after 5 minutes
-  step(wait: 5.minutes) { verify_status! }
-
-  # Check every 2 hours after
-  12.times do
-    step(wait: 2.hours) { verify_status! }
-  end
-
-  # Check once a day after that
-  7.times do
-    step(wait: 1.day) { verify_status! }
-  end
-
-  step :terminate do
-    payment.failed!
-  end
-
-  def verify_status!
-    status = payment.current_status
-    finished! if status.complete?
-  end
-end
-```
-
-This makes the definition very compact.
-
-## Using instance methods as steps
-
-You can use instance methods as steps by passing their name as a symbol to the `step` method:
-
-```ruby
-class Erasure < StepperMotor::Journey
-  step :erase_attachments
-  step :erase_emails
-
-  def erase_attachments
-    hero.uploaded_attachments.find_each(&:destroy)
-  end
-
-  def erase_emails
-    while hero.emails.count > 0
-      hero.emails.limit(5000).delete_all
-    end
-  end
-end
-```
-
-Since a method definition in Ruby returns a Symbol, you can use the return value of the `def` expression
-to define a `step` immediately:
-
-```ruby
-class Erasure < StepperMotor::Journey
-  step def erase_attachments
-    hero.uploaded_attachments.find_each(&:destroy)
-  end
-
-  step def erase_emails
-    while hero.emails.count > 0
-      hero.emails.limit(5000).delete_all
-    end
-  end
-end
-```
 
 ## Exception handling inside steps
 
