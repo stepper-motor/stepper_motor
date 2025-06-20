@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.17] - 2025-06-20
+
+- Mandate Ruby 3.1+ because we are using 3.x syntax and there are shenanigans with sqlite3 gem version and locking. Compatibility with 2.7 can be assured but is too much hassle at the moment.
+  If you need this compatibility, feel free to implement it or contact me for a quote.
+  
 ## [0.1.16] - 2025-06-20
 
 - Add `skip!` flow control method to skip the current (or next) step and move on to the subsequent step, or finish the journey.
