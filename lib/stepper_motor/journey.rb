@@ -171,12 +171,28 @@ module StepperMotor
     # All conditions are evaluated after setting the state to `performing`.
     # If any condition is satisfied, the journey will cancel.
     #
+    # @param condition_arg [TrueClass, FalseClass, Symbol, Proc, Array, Conditional] the condition to check
     # @param condition_blk [Proc] a block that will be evaluated as a condition
     # @return [void]
-    def self.cancel_if(&condition_blk)
-      raise ArgumentError, "cancel_if requires a block" unless condition_blk
+    def self.cancel_if(condition_arg = :__no_argument_given__, &condition_blk)
+      # Check if neither argument nor block is provided
+      if condition_arg == :__no_argument_given__ && !condition_blk
+        raise ArgumentError, "cancel_if requires either a condition argument or a block"
+      end
 
-      conditional = StepperMotor::Conditional.new(condition_blk)
+      # Check if both argument and block are provided
+      if condition_arg != :__no_argument_given__ && condition_blk
+        raise ArgumentError, "cancel_if accepts either a condition argument or a block, but not both"
+      end
+
+      # Select the condition: positional argument takes precedence if not sentinel
+      condition = if condition_arg != :__no_argument_given__
+        condition_arg
+      else
+        condition_blk
+      end
+
+      conditional = StepperMotor::Conditional.new(condition)
 
       # As per Rails docs: you need to be aware when using class_attribute with mutable structures
       # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.

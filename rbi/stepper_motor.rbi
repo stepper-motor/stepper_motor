@@ -186,9 +186,11 @@ module StepperMotor
     # All conditions are evaluated after setting the state to `performing`.
     # If any condition is satisfied, the journey will cancel.
     # 
+    # _@param_ `condition_arg` — the condition to check
+    # 
     # _@param_ `condition_blk` — a block that will be evaluated as a condition
-    sig { params(condition_blk: T.untyped).void }
-    def self.cancel_if(&condition_blk); end
+    sig { params(condition_arg: T.any(TrueClass, FalseClass, Symbol, Proc, T::Array[T.untyped], Conditional), condition_blk: T.untyped).void }
+    def self.cancel_if(condition_arg = :__no_argument_given__, &condition_blk); end
 
     # Performs the next step in the journey. Will check whether any other process has performed the step already
     # and whether the record is unchanged, and will then lock it and set the state to 'performimg'.
