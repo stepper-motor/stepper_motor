@@ -515,6 +515,123 @@ It is possible to store instance variables on the `Journey` instance, but they d
 > This means that the volatile state such as instance variables is not going to be available between steps. Always assume that
 > the `Journey` you are inside of does not have any instance variables set by previous steps and has just been freshly loaded from the database.
 
+### Blanket step conditions with `cancel_if`
+
+In addition to conditional steps that can be skipped, you can define blanket conditions that apply to all steps in a journey using `cancel_if`. These conditions are evaluated after the journey's state is set to `performing` but before any step execution begins. If any `cancel_if` condition is satisfied, the entire journey is canceled immediately.
+
+`cancel_if` works like Rails' `etag` - it's class-inheritable and appendable. You can call `cancel_if` multiple times in a journey definition, and all conditions will be evaluated.
+
+#### Using blocks with `cancel_if`
+
+The most common way to use `cancel_if` is with a block that gets evaluated in the context of the journey:
+
+```ruby
+class UserOnboardingJourney < StepperMotor::Journey
+  cancel_if { hero.deactivated? }
+  cancel_if { hero.account_closed? }
+
+  step :send_welcome_email do
+    WelcomeMailer.welcome(hero).deliver_later
+  end
+
+  step :send_premium_offer, wait: 2.days do
+    PremiumOfferMailer.exclusive_offer(hero).deliver_later
+  end
+
+  step :complete_onboarding, wait: 7.days do
+    hero.update!(onboarding_completed_at: Time.current)
+  end
+end
+```
+
+In this example, if the user becomes deactivated or closes their account at any point during the onboarding journey, the entire journey will be canceled and no further steps will be executed.
+
+#### Using positional arguments with `cancel_if`
+
+You can also pass conditions directly as arguments to `cancel_if`:
+
+```ruby
+class PaymentProcessingJourney < StepperMotor::Journey
+  cancel_if :payment_canceled?
+  cancel_if { hero.amount > 10000 }  # Cancel if amount exceeds limit
+
+  step :validate_payment do
+    PaymentValidator.validate(hero)
+  end
+
+  step :process_payment do
+    PaymentProcessor.charge(hero)
+  end
+
+  step :send_confirmation do
+    PaymentConfirmationMailer.confirm(hero).deliver_later
+  end
+
+  private
+
+  def payment_canceled?
+    hero.canceled_at.present?
+  end
+end
+```
+
+#### Supported condition types
+
+`cancel_if` accepts the same types of conditions as `skip_if`:
+
+* **Symbols**: Method names that return a boolean
+* **Blocks**: Callable blocks that return a boolean
+* **Booleans**: Literal `true` or `false` values
+* **Arrays**: Arrays of conditions (all must be true)
+* **Procs/Lambdas**: Callable objects
+* **Conditional objects**: `StepperMotor::Conditional` instances
+* **Nil**: Treated as `false` (doesn't cancel)
+
+#### Multiple `cancel_if` conditions
+
+You can define multiple `cancel_if` conditions, and any one of them being satisfied will cancel the journey:
+
+```ruby
+class EmailCampaignJourney < StepperMotor::Journey
+  cancel_if { hero.unsubscribed? }
+  cancel_if { hero.bounced? }
+  cancel_if { hero.complained? }
+  cancel_if { hero.deactivated? }
+
+  step :send_initial_email do
+    CampaignMailer.initial(hero).deliver_later
+  end
+
+  step :send_follow_up, wait: 3.days do
+    CampaignMailer.follow_up(hero).deliver_later
+  end
+
+  step :send_final_reminder, wait: 7.days do
+    CampaignMailer.final_reminder(hero).deliver_later
+  end
+end
+```
+
+#### Inheritance and appendability
+
+`cancel_if` conditions are class-inheritable and appendable, just like Rails' `etag`:
+
+```ruby
+class BaseJourney < StepperMotor::Journey
+  cancel_if { hero.deactivated? }
+end
+
+class PremiumUserJourney < BaseJourney
+  cancel_if { hero.subscription_expired? }  # Adds to parent's conditions
+
+  step :send_premium_content do
+    PremiumContentMailer.send_content(hero).deliver_later
+  end
+end
+```
+
+In this example, `PremiumUserJourney` will cancel if either the user is deactivated (from the parent class) or if their subscription has expired (from the child class).
+
 
 ### Waiting for the start of the step
 

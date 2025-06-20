@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.1.18] - 2025-06-20
+
+- Add `cancel_if` at Journey class level for blanket journey cancellation conditions. This makes it very easy to abort journeys across multiple steps.
+
 ## [0.1.17] - 2025-06-20
 
 - Mandate Ruby 3.1+ because we are using 3.x syntax and there are shenanigans with sqlite3 gem version and locking. Compatibility with 2.7 can be assured but is too much hassle at the moment.

@@ -112,6 +112,9 @@ module StepperMotor
     # _@see_ `Journey.step_definitions`
     def step_definitions: () -> untyped
 
+    # _@return_ — the cancel_if conditions defined for this journey class
+    def cancel_if_conditions: () -> ::Array[StepperMotor::Conditional]
+
     # sord duck - #to_f looks like a duck type, replacing with untyped
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # sord duck - #to_f looks like a duck type, replacing with untyped
@@ -154,6 +157,17 @@ module StepperMotor
     # 
     # _@see_ `Journey.lookup_step_definition`
     def lookup_step_definition: (untyped by_step_name) -> untyped
+
+    # Defines a condition that will cause the journey to cancel if satisfied.
+    # This works like Rails' `etag` - it's class-inheritable and appendable.
+    # Multiple `cancel_if` calls can be made to a Journey definition.
+    # All conditions are evaluated after setting the state to `performing`.
+    # If any condition is satisfied, the journey will cancel.
+    # 
+    # _@param_ `condition_arg` — the condition to check
+    # 
+    # _@param_ `condition_blk` — a block that will be evaluated as a condition
+    def self.cancel_if: (?(TrueClass | FalseClass | Symbol | Proc | ::Array[untyped] | Conditional) condition_arg) -> void
 
     # Performs the next step in the journey. Will check whether any other process has performed the step already
     # and whether the record is unchanged, and will then lock it and set the state to 'performimg'.
