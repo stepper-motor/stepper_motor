@@ -2,7 +2,7 @@
 # StepperMotor is a module for building multi-step flows where steps are sequential and only
 # ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
-  VERSION = T.let("0.1.12", T.untyped)
+  VERSION = T.let("0.1.14", T.untyped)
   PerformStepJobV2 = T.let(StepperMotor::PerformStepJob, T.untyped)
   RecoverStuckJourneysJobV1 = T.let(StepperMotor::RecoverStuckJourneysJob, T.untyped)
 
@@ -41,11 +41,11 @@ module StepperMotor
         seq: T.untyped,
         on_exception: Symbol,
         wait: T.any(Numeric, ActiveSupport::Duration),
-        if: T.nilable(T.any(Symbol, T.proc.params(journey: StepperMotor::Journey).returns(T.untyped))),
+        if: T.any(TrueClass, FalseClass, Symbol, Proc),
         step_block: T.untyped
       ).void
     end
-    def initialize(name:, seq:, on_exception:, wait: 0, if: nil, &step_block); end
+    def initialize(name:, seq:, on_exception:, wait: 0, if: true, &step_block); end
 
     # Checks if the step should be performed based on the if condition
     # 
@@ -150,12 +150,12 @@ module StepperMotor
         wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         on_exception: Symbol,
-        if: T.nilable(T.any(Symbol, T.proc.params(journey: StepperMotor::Journey).returns(T.untyped))),
-        additional_step_definition_options: T.untyped,
+        if: T.any(TrueClass, FalseClass, Symbol, Proc),
+        additional_step_definition_options: T::Hash[T.untyped, T.untyped],
         blk: T.untyped
       ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: nil, **additional_step_definition_options, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: true, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also

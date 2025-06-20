@@ -48,14 +48,11 @@ class StepperMotor::Step
   def should_perform?(journey)
     case @if_condition
     when true, false
-      @if_condition
+      !!@if_condition
     when Symbol
       journey.send(@if_condition) # Allow private methods
-    when @if_condition.respond_to?(:call)
-      journey.instance_exec(&@if_condition)
     else
-      # This should never happen due to validation in constructor, but just in case
-      raise ArgumentError, "if: condition must be a boolean, Symbol or a callable object"
+      journey.instance_exec(&@if_condition)
     end
   end
 

@@ -38,7 +38,7 @@ module StepperMotor
                       seq: untyped,
                       on_exception: Symbol,
                       ?wait: (Numeric | ActiveSupport::Duration),
-                      ?if: ((Symbol | Proc) | nil)
+                      ?if: (TrueClass | FalseClass | Symbol | Proc)
                     ) -> void
 
     # Checks if the step should be performed based on the if condition
@@ -137,8 +137,8 @@ module StepperMotor
                      ?wait: (Float | untyped | ActiveSupport::Duration)?,
                      ?after: (Float | untyped | ActiveSupport::Duration)?,
                      ?on_exception: Symbol,
-                     ?if: ((Symbol | Proc) | nil),
-                     **untyped additional_step_definition_options
+                     ?if: (TrueClass | FalseClass | Symbol | Proc),
+                     **::Hash[untyped, untyped] additional_step_definition_options
                    ) -> StepperMotor::Step
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type

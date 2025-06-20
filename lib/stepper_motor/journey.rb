@@ -78,12 +78,12 @@ module StepperMotor
     #    attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition.
     #    Mutually exclusive with `wait:`
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
-    # @param if[Symbol,Proc] condition to check before performing the step. If a symbol is provided,
+    # @param if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
     #    it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
     #    The step will only be performed if the condition returns a truthy value.
     # @param additional_step_definition_options[Hash] Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: nil, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: true, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
