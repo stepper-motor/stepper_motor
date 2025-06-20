@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+# StepperMotor is a module for building multi-step flows where steps are sequential and only
+# ever progress forward. The building block of StepperMotor is StepperMotor::Journey
 module StepperMotor
   # A Journey is the main building block of StepperMotor. You create a journey to guide a particular model
   # ("hero") through a sequence of steps. Any of your model can be the hero and have multiple Journeys. To create
@@ -47,9 +49,6 @@ module StepperMotor
 
     # @return [Array<StepperMotor::Conditional>] the cancel_if conditions defined for this journey class
     class_attribute :cancel_if_conditions, default: []
-
-    # @return [Array<StepperMotor::Conditional>] the skip_if conditions defined for this journey class
-    class_attribute :skip_if_conditions, default: []
 
     belongs_to :hero, polymorphic: true, optional: true
 
@@ -166,13 +165,6 @@ module StepperMotor
       self.class.cancel_if_conditions
     end
 
-    # Alias for the class attribute, for brevity
-    #
-    # @see Journey.skip_if_conditions
-    def skip_if_conditions
-      self.class.skip_if_conditions
-    end
-
     # Defines a condition that will cause the journey to cancel if satisfied.
     # This works like Rails' `etag` - it's class-inheritable and appendable.
     # Multiple `cancel_if` calls can be made to a Journey definition.
@@ -208,41 +200,6 @@ module StepperMotor
       self.cancel_if_conditions = cancel_if_conditions + [conditional]
     end
 
-    # Defines a condition that will cause the current step to be skipped if satisfied.
-    # This works like Rails' `etag` - it's class-inheritable and appendable.
-    # Multiple `skip_if` calls can be made to a Journey definition.
-    # All conditions are evaluated after setting the state to `performing` but before step execution.
-    # If any condition is satisfied, the current step will be skipped and the journey will proceed to the next step.
-    #
-    # @param condition_arg [TrueClass, FalseClass, Symbol, Proc, Array, Conditional] the condition to check
-    # @param condition_blk [Proc] a block that will be evaluated as a condition
-    # @return [void]
-    def self.skip_if(condition_arg = :__no_argument_given__, &condition_blk)
-      # Check if neither argument nor block is provided
-      if condition_arg == :__no_argument_given__ && !condition_blk
-        raise ArgumentError, "skip_if requires either a condition argument or a block"
-      end
-
-      # Check if both argument and block are provided
-      if condition_arg != :__no_argument_given__ && condition_blk
-        raise ArgumentError, "skip_if accepts either a condition argument or a block, but not both"
-      end
-
-      # Select the condition: positional argument takes precedence if not sentinel
-      condition = if condition_arg != :__no_argument_given__
-        condition_arg
-      else
-        condition_blk
-      end
-
-      conditional = StepperMotor::Conditional.new(condition)
-
-      # As per Rails docs: you need to be aware when using class_attribute with mutable structures
-      # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
-      # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
-      self.skip_if_conditions = skip_if_conditions + [conditional]
-    end
-
     # Performs the next step in the journey. Will check whether any other process has performed the step already
     # and whether the record is unchanged, and will then lock it and set the state to 'performimg'.
     #
@@ -270,35 +227,6 @@ module StepperMotor
       if cancel_if_conditions.any? { |conditional| conditional.satisfied_by?(self) }
         logger.info { "cancel_if condition satisfied, canceling journey" }
         cancel!
-        return
-      end
-
-      # Check skip_if conditions after setting state to performing
-      if skip_if_conditions.any? { |conditional| conditional.satisfied_by?(self) }
-        logger.info { "skip_if condition satisfied, skipping current step" }
-        current_step_name = next_step_name
-        current_step_definition = lookup_step_definition(current_step_name)
-        
-        if current_step_definition
-          current_step_seq = current_step_definition.seq
-          next_step_definition = step_definitions[current_step_seq + 1]
-
-          if next_step_definition
-            # There are more steps after this one - schedule the next step
-            logger.info { "skipping current step #{current_step_name}, will continue to #{next_step_definition.name}" }
-            set_next_step_and_enqueue(next_step_definition)
-            ready!
-          else
-            # This is the last step - finish the journey
-            logger.info { "skipping current step #{current_step_name}, finishing journey" }
-            finished!
-            update!(previous_step_name: current_step_name, next_step_name: nil)
-          end
-        else
-          # No step definition found - finish the journey
-          logger.warn { "no step definition found for #{current_step_name} - finishing journey" }
-          finished!
-        end
         return
       end
 
