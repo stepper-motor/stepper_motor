@@ -632,21 +632,6 @@ end
 
 In this example, `PremiumUserJourney` will cancel if either the user is deactivated (from the parent class) or if their subscription has expired (from the child class).
 
-#### Error handling
-
-`cancel_if` will raise an `ArgumentError` if:
-- No condition is provided (neither argument nor block)
-- Both an argument and a block are provided simultaneously
-
-```ruby
-# This will raise an error
-cancel_if
-
-# This will also raise an error
-cancel_if true do
-  false
-end
-```
 
 ### Waiting for the start of the step
 
