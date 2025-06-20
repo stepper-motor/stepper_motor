@@ -13,6 +13,7 @@ module StepperMotor
 
   autoload :Journey, File.dirname(__FILE__) + "/stepper_motor/journey.rb"
   autoload :Step, File.dirname(__FILE__) + "/stepper_motor/step.rb"
+  autoload :Conditional, File.dirname(__FILE__) + "/stepper_motor/conditional.rb"
 
   autoload :BaseJob, File.dirname(__FILE__) + "/stepper_motor/base_job.rb"
   autoload :PerformStepJob, File.dirname(__FILE__) + "/stepper_motor/perform_step_job.rb"

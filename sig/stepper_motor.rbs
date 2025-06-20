@@ -320,6 +320,22 @@ module StepperMotor
   class BaseJob < ActiveJob::Base
   end
 
+  # A wrapper for conditional logic that can be evaluated against an object.
+  # This class encapsulates different types of conditions (booleans, symbols, callables, arrays)
+  # and provides a unified interface for checking if a condition is satisfied by a given object.
+  # It handles negation and ensures proper context when evaluating conditions.
+  class Conditional
+    # sord omit - no YARD type given for "condition", using untyped
+    # sord omit - no YARD type given for "negate:", using untyped
+    def initialize: (untyped condition, ?negate: untyped) -> void
+
+    # sord omit - no YARD type given for "object", using untyped
+    def satisfied_by?: (untyped object) -> bool
+
+    # sord omit - no YARD return type given, using untyped
+    def validate_condition: () -> untyped
+  end
+
   module TestHelper
     # Allows running a given Journey to completion, skipping across the waiting periods.
     # This is useful to evaluate all side effects of a Journey. The helper will ensure
