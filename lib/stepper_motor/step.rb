@@ -24,12 +24,39 @@ class StepperMotor::Step
   #   The possible values are:
   #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
   #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
-  def initialize(name:, seq:, on_exception:, wait: 0, &step_block)
+  # @param if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
+  #   it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
+  #   The step will only be performed if the condition returns a truthy value.
+  def initialize(name:, seq:, on_exception:, wait: 0, if: true, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait
     @seq = seq
     @on_exception = on_exception # TODO: Validate?
+    @if_condition = binding.local_variable_get(:if) # Done this way because `if` is a reserved keyword
+
+    # Validate the if condition
+    if ![true, false].include?(@if_condition) && !@if_condition.is_a?(Symbol) && !@if_condition.respond_to?(:call)
+      raise ArgumentError, "if: condition must be a boolean, Symbol or a callable object, but was a #{@if_condition.inspect}"
+    end
+  end
+
+  # Checks if the step should be performed based on the if condition
+  #
+  # @param journey[StepperMotor::Journey] the journey to check the condition for
+  # @return [Boolean] true if the step should be performed, false otherwise
+  def should_perform?(journey)
+    case @if_condition
+    when true, false
+      @if_condition
+    when Symbol
+      journey.send(@if_condition) # Allow private methods
+    when @if_condition.respond_to?(:call)
+      journey.instance_exec(&@if_condition)
+    else
+      # This should never happen due to validation in constructor, but just in case
+      raise ArgumentError, "if: condition must be a boolean, Symbol or a callable object"
+    end
   end
 
   # Performs the step on the passed Journey, wrapping the step with the required context.

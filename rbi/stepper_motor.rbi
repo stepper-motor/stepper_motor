@@ -33,16 +33,27 @@ module StepperMotor
     # _@param_ `wait` — the amount of time to wait before entering the step
     # 
     # _@param_ `on_exception` — the action to take if an exception occurs when performing the step. The possible values are: * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising. * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+    # 
+    # _@param_ `if` — condition to check before performing the step. If a symbol is provided, it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context. The step will only be performed if the condition returns a truthy value.
     sig do
       params(
         name: T.any(String, Symbol),
         seq: T.untyped,
         on_exception: Symbol,
         wait: T.any(Numeric, ActiveSupport::Duration),
+        if: T.nilable(T.any(Symbol, T.proc.params(journey: StepperMotor::Journey).returns(T.untyped))),
         step_block: T.untyped
       ).void
     end
-    def initialize(name:, seq:, on_exception:, wait: 0, &step_block); end
+    def initialize(name:, seq:, on_exception:, wait: 0, if: nil, &step_block); end
+
+    # Checks if the step should be performed based on the if condition
+    # 
+    # _@param_ `journey` — the journey to check the condition for
+    # 
+    # _@return_ — true if the step should be performed, false otherwise
+    sig { params(journey: StepperMotor::Journey).returns(T::Boolean) }
+    def should_perform?(journey); end
 
     # Performs the step on the passed Journey, wrapping the step with the required context.
     # 
@@ -128,6 +139,8 @@ module StepperMotor
     # 
     # _@param_ `on_exception` — See {StepperMotor::Step#on_exception}
     # 
+    # _@param_ `if` — condition to check before performing the step. If a symbol is provided, it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context. The step will only be performed if the condition returns a truthy value.
+    # 
     # _@param_ `additional_step_definition_options` — Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # 
     # _@return_ — the step definition that has been created
@@ -137,11 +150,12 @@ module StepperMotor
         wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         on_exception: Symbol,
+        if: T.nilable(T.any(Symbol, T.proc.params(journey: StepperMotor::Journey).returns(T.untyped))),
         additional_step_definition_options: T.untyped,
         blk: T.untyped
       ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, **additional_step_definition_options, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: nil, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also
