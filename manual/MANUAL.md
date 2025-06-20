@@ -485,31 +485,6 @@ class OrderProcessingJourney < StepperMotor::Journey
 end
 ```
 
-Because conditions are `instance_exec`d they can access instance variables and can change during journey execution:
-
-```ruby
-class DataProcessingJourney < StepperMotor::Journey
-  step :validate_data, if: -> { @validation_needed } do
-    DataValidator.validate(hero.data)
-    @validation_needed = false
-  end
-
-  step :process_data do
-    hero.process_data!
-    @validation_needed = true  # Enable validation for next iteration
-  end
-
-  step :finalize, if: -> { @validation_needed } do
-    hero.finalize!
-  end
-
-  def initialize(*args)
-    super
-    @validation_needed = true
-  end
-end
-```
-
 #### Skipping steps with literal conditions
 
 You can use literal boolean values to conditionally include or exclude steps:
@@ -531,6 +506,17 @@ end
 ```
 
 When a step is skipped due to a false condition, the journey seamlessly continues to the next step without any interruption - or finishes if that step was the last one.
+
+#### Accessing Journey state in conditions
+
+It is possible to store instance variables on the `Journey` instance, but they do not persist between steps. This is very important to remember:
+
+> [!WARNING]
+> Because conditions are `instance_exec`d they can access instance variables of the `Journey`. It will also break majestically, because
+> the `Journey` is getting persisted and then loaded from the database on a different matchine, and it is always consumed fresh.
+> This means that the volatile state such as instance variables is not going to be available between steps. Always assume that
+> the `Journey` you are inside of does not have any instance variables set by previous steps and has just been freshly loaded from the database.
+
 
 ### Waiting for the start of the step
 
