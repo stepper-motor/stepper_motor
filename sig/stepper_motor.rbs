@@ -112,11 +112,8 @@ module StepperMotor
     # _@see_ `Journey.step_definitions`
     def step_definitions: () -> untyped
 
-    # sord omit - no YARD return type given, using untyped
-    # Alias for the class attribute, for brevity
-    # 
-    # _@see_ `Journey.cancel_if_conditions`
-    def cancel_if_conditions: () -> untyped
+    # _@return_ — the cancel_if conditions defined for this journey class
+    def cancel_if_conditions: () -> ::Array[StepperMotor::Conditional]
 
     # sord duck - #to_f looks like a duck type, replacing with untyped
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project

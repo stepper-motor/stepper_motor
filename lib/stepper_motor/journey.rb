@@ -158,13 +158,6 @@ module StepperMotor
       self.class.lookup_step_definition(by_step_name)
     end
 
-    # Alias for the class attribute, for brevity
-    #
-    # @see Journey.cancel_if_conditions
-    def cancel_if_conditions
-      self.class.cancel_if_conditions
-    end
-
     # Defines a condition that will cause the journey to cancel if satisfied.
     # This works like Rails' `etag` - it's class-inheritable and appendable.
     # Multiple `cancel_if` calls can be made to a Journey definition.

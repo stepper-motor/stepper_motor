@@ -124,11 +124,8 @@ module StepperMotor
     sig { returns(T.untyped) }
     def step_definitions; end
 
-    # sord omit - no YARD return type given, using untyped
-    # Alias for the class attribute, for brevity
-    # 
-    # _@see_ `Journey.cancel_if_conditions`
-    sig { returns(T.untyped) }
+    # _@return_ — the cancel_if conditions defined for this journey class
+    sig { returns(T::Array[StepperMotor::Conditional]) }
     def cancel_if_conditions; end
 
     # sord duck - #to_f looks like a duck type, replacing with untyped
