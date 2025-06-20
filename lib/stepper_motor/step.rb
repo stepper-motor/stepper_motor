@@ -67,7 +67,7 @@ class StepperMotor::Step
   def perform_in_context_of(journey)
     # Return early should the `if` condition be false
     if !should_perform?(journey)
-      journey.logger.debug { "skipping as if: condition was falsey or returned false" }
+      journey.logger.info { "skipping as if: condition was falsey or returned false" }
       return
     end
 
