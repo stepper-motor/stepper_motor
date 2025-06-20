@@ -6,6 +6,7 @@ require "minitest/mock"
 class StepDefinitionTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
   include SideEffects::TestHelper
+  include StepperMotor::TestHelper
 
   test "requires either a block or a name" do
     assert_raises(StepperMotor::StepConfigurationError) do

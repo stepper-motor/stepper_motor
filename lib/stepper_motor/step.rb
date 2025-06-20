@@ -24,12 +24,37 @@ class StepperMotor::Step
   #   The possible values are:
   #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
   #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
-  def initialize(name:, seq:, on_exception:, wait: 0, &step_block)
+  # @param if[TrueClass,FalseClass,NilClass,Symbol,Proc] condition to check before performing the step. If a boolean is provided,
+  #   it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided,
+  #   it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
+  #   The step will only be performed if the condition returns a truthy value.
+  def initialize(name:, seq:, on_exception:, wait: 0, if: true, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait
     @seq = seq
     @on_exception = on_exception # TODO: Validate?
+    @if_condition = binding.local_variable_get(:if) # Done this way because `if` is a reserved keyword
+
+    # Validate the if condition
+    if ![true, false, nil].include?(@if_condition) && !@if_condition.is_a?(Symbol) && !@if_condition.respond_to?(:call)
+      raise ArgumentError, "if: condition must be a boolean, nil, Symbol or a callable object, but was a #{@if_condition.inspect}"
+    end
+  end
+
+  # Checks if the step should be performed based on the if condition
+  #
+  # @param journey[StepperMotor::Journey] the journey to check the condition for
+  # @return [Boolean] true if the step should be performed, false otherwise
+  def should_perform?(journey)
+    case @if_condition
+    when true, false, nil
+      !!@if_condition
+    when Symbol
+      journey.send(@if_condition) # Allow private methods
+    else
+      journey.instance_exec(&@if_condition)
+    end
   end
 
   # Performs the step on the passed Journey, wrapping the step with the required context.
@@ -40,6 +65,12 @@ class StepperMotor::Step
   #   journey will be called
   # @return void
   def perform_in_context_of(journey)
+    # Return early should the `if` condition be false
+    if !should_perform?(journey)
+      journey.logger.info { "skipping as if: condition was falsey or returned false" }
+      return
+    end
+
     # This is a tricky bit.
     #
     # reattempt!, cancel! (and potentially - future flow control methods) all use `throw` to
@@ -61,21 +92,18 @@ class StepperMotor::Step
       end
     end
   rescue MissingDefinition
-    # This journey won't succeed with any number of reattempts, cancel it. Cancellation also will throw.
+    # This journey won't succeed with any number of reattempts, pause it.
     catch(:abort_step) { journey.pause! }
     raise
   rescue => e
     # Act according to the set policy. The basic 2 for the moment are :reattempt! and :cancel!,
     # and can be applied by just calling the methods on the passed journey
     case @on_exception
-    when :reattempt!
-      catch(:abort_step) { journey.reattempt! }
-    when :cancel!
-      catch(:abort_step) { journey.cancel! }
-    when :pause!
-      catch(:abort_step) { journey.pause! }
+    when :reattempt!, :cancel!, :pause!
+      catch(:abort_step) { journey.public_send(@on_exception) }
     else
       # Leave the journey hanging in the "performing" state
+      journey.logger.warn { "unusual on_exception: value (#{@on_exception.inspect}) - the journey will be left hanging in 'performing' state and will be collected as hung" }
     end
 
     # Re-raise the exception so that the Rails error handling can register it

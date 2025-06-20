@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.15] - 2025-06-20
+
+- Add `if:` condition allowing steps to be skipped. The `if:` can be a boolean, a callable or a symbol for a method name. The method should be on the Journey.
+  
 ## [0.1.14] - 2025-06-10
 
 - Since MySQL does not support partial indexes, use a generated column for the uniqueness checks. Other indexes

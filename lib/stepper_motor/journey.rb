@@ -72,15 +72,18 @@ module StepperMotor
     #    When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the
     #    `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
     # @param after[Float,#to_f,ActiveSupport::Duration] the amount of time this step should wait before getting performed
-    #    including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed
-    #    to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this
-    #    amount of time _minus the `wait` values of the preceding steps, and the
-    #    `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait`
-    #    value and passed to the step definition. Mutually exclusive with `wait:`
+    #    including all the previous waits. This allows you to set the wait time based on the time after the journey started,
+    #    as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to
+    #    be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at`
+    #    attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition.
+    #    Mutually exclusive with `wait:`
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
-    # @param additional_step_definition_options Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
+    # @param if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
+    #    it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
+    #    The step will only be performed if the condition returns a truthy value.
+    # @param additional_step_definition_options[Hash] Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: true, **additional_step_definition_options, &blk)
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -109,7 +112,7 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, on_exception:, **additional_step_definition_options, &blk).tap do |step_definition|
+      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, on_exception:, if: binding.local_variable_get(:if), **additional_step_definition_options, &blk).tap do |step_definition|
         # As per Rails docs: you need to be aware when using class_attribute with mutable structures
         # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
         # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
