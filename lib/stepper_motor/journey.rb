@@ -47,6 +47,9 @@ module StepperMotor
     # @return [Array<StepperMotor::Step>] the step definitions defined so far
     class_attribute :step_definitions, default: []
 
+    # @return [Array<StepperMotor::Conditional>] the cancel_if conditions defined for this journey class
+    class_attribute :cancel_if_conditions, default: []
+
     belongs_to :hero, polymorphic: true, optional: true
 
     STATES = %w[ready paused performing canceled finished]
@@ -155,6 +158,32 @@ module StepperMotor
       self.class.lookup_step_definition(by_step_name)
     end
 
+    # Alias for the class attribute, for brevity
+    #
+    # @see Journey.cancel_if_conditions
+    def cancel_if_conditions
+      self.class.cancel_if_conditions
+    end
+
+    # Defines a condition that will cause the journey to cancel if satisfied.
+    # This works like Rails' `etag` - it's class-inheritable and appendable.
+    # Multiple `cancel_if` calls can be made to a Journey definition.
+    # All conditions are evaluated after setting the state to `performing`.
+    # If any condition is satisfied, the journey will cancel.
+    #
+    # @param condition_blk [Proc] a block that will be evaluated as a condition
+    # @return [void]
+    def self.cancel_if(&condition_blk)
+      raise ArgumentError, "cancel_if requires a block" unless condition_blk
+
+      conditional = StepperMotor::Conditional.new(condition_blk)
+
+      # As per Rails docs: you need to be aware when using class_attribute with mutable structures
+      # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
+      # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
+      self.cancel_if_conditions = cancel_if_conditions + [conditional]
+    end
+
     # Performs the next step in the journey. Will check whether any other process has performed the step already
     # and whether the record is unchanged, and will then lock it and set the state to 'performimg'.
     #
@@ -177,6 +206,14 @@ module StepperMotor
         performing!
         after_locking_for_step(next_step_name)
       end
+
+      # Check cancel_if conditions after setting state to performing
+      if cancel_if_conditions.any? { |conditional| conditional.satisfied_by?(self) }
+        logger.info { "cancel_if condition satisfied, canceling journey" }
+        cancel!
+        return
+      end
+
       current_step_name = next_step_name
 
       if current_step_name
