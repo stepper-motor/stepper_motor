@@ -550,23 +550,32 @@ stateDiagram-v2
 
 ## Flow control within steps
 
-Inside a step, you currently can use the following flow control methods:
+You currently can use the following flow control methods, both when a step is performing and on a Journey fetched from the database:
 
 * `cancel!` - cancel the Journey immediately. It will be persisted and moved into the `canceled` state.
 * `reattempt!` - reattempt the Journey immediately, triggering it asynchronously. It will be persisted
     and returned into the `ready` state. You can specify the `wait:` interval, which may deviate from
-    the wait time defined for the current step
+    the wait time defined for the current step. `reattepmt!` cannot be used outside of steps!
 * `pause!` - pause the Journey either within a step or outside of one. This moves the Journey into the `paused` state.
     In that state, the journey is still considered unique-per-hero (you won't be able to create an identical Journey)
     but it will not be picked up by the scheduled step jobs. Should it get picked up, the step will not be performed.
     You have to explicitly `resume!` the Journey to make it `ready` - once you do, a new job will be scheduled to
     perform the step.
+* `skip!` - skip either the step currently being performed or the step scheduled to be taken next, and proceed to the next
+    step in the journey. This is useful when you want to conditionally skip a step based on some business logic without
+    canceling the entire journey. For example, you might want to skip a reminder email step if the user has already taken the required action.
+    
+    If there are more steps after the current step, `skip!` will schedule the next step to be performed.
+    If the current step is the last step in the journey, `skip!` will finish the journey.
 
 > [!IMPORTANT]  
-> Flow control methods use `throw` when they are called from inside a step. Unlike Rails `render` or `redirect` that require an explicit
-> `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
+> Flow control methods use `throw` when they are called during step execution. Unlike Rails `render` or `redirect` that require an explicit
+> `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed inside steps, so those methods may only be called once within a particular scope.
 
-You can't call those methods outside of the context of a performing step, and an exception is going to be raised if you do.
+Most of those methods do the right thing both inside steps and outside step execution. The only exception is `reattempt!`.
+
+> [!IMPORTANT]  
+> `reattempt!` only works inside of steps.
 
 ## Transactional semantics within steps
 

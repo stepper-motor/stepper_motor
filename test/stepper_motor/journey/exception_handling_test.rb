@@ -3,6 +3,8 @@
 require "test_helper"
 
 class ExceptionHandlingTest < ActiveSupport::TestCase
+  include SideEffects::TestHelper
+
   # See below.
   self.use_transactional_tests = false
 
@@ -44,6 +46,61 @@ class ExceptionHandlingTest < ActiveSupport::TestCase
     assert faulty_journey.persisted?
     refute faulty_journey.changed?
     assert faulty_journey.canceled?
+  end
+
+  test "with :skip!, skips the failing step and continues to next step" do
+    faulty_journey_class = create_journey_subclass do
+      step on_exception: :skip! do
+        raise CustomEx, "Something went wrong"
+      end
+
+      step do
+        SideEffects.touch! "second step"
+      end
+    end
+
+    faulty_journey = faulty_journey_class.create!
+    assert faulty_journey.ready?
+
+    assert_raises(CustomEx) { faulty_journey.perform_next_step! }
+
+    assert faulty_journey.persisted?
+    refute faulty_journey.changed?
+    assert faulty_journey.ready?
+
+    # The second step should now be scheduled
+    assert_produced_side_effects("second step") do
+      faulty_journey.perform_next_step!
+    end
+    assert faulty_journey.finished?
+  end
+
+  test "with :skip! on last step, skips the failing step and finishes the journey" do
+    faulty_journey_class = create_journey_subclass do
+      step do
+        SideEffects.touch! "first step"
+      end
+
+      step on_exception: :skip! do
+        raise CustomEx, "Something went wrong"
+      end
+    end
+
+    faulty_journey = faulty_journey_class.create!
+    assert faulty_journey.ready?
+
+    # Perform first step
+    assert_produced_side_effects("first step") do
+      faulty_journey.perform_next_step!
+    end
+    assert faulty_journey.ready?
+
+    # The second step should be skipped due to exception
+    assert_raises(CustomEx) { faulty_journey.perform_next_step! }
+
+    assert faulty_journey.persisted?
+    refute faulty_journey.changed?
+    assert faulty_journey.finished?
   end
 
   test "pauses the journey by default at the failig step" do

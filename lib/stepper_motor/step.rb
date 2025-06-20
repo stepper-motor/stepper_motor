@@ -24,6 +24,8 @@ class StepperMotor::Step
   #   The possible values are:
   #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
   #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+  #   * `:pause!` - pauses the Journey and re-raises the exception. The Journey will be persisted before re-raising.
+  #   * `:skip!` - skips the current step and proceeds to the next step, or finishes the journey if it's the last step.
   # @param skip_if[TrueClass,FalseClass,NilClass,Symbol,Proc] condition to check before performing the step. If a boolean is provided,
   #   it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided,
   #   it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
@@ -99,7 +101,7 @@ class StepperMotor::Step
     # Act according to the set policy. The basic 2 for the moment are :reattempt! and :cancel!,
     # and can be applied by just calling the methods on the passed journey
     case @on_exception
-    when :reattempt!, :cancel!, :pause!
+    when :reattempt!, :cancel!, :pause!, :skip!
       catch(:abort_step) { journey.public_send(@on_exception) }
     else
       # Leave the journey hanging in the "performing" state

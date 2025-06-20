@@ -27,6 +27,55 @@ module StepperMotor::Journey::FlowControl
     throw :abort_step if @current_step_definition
   end
 
+  # Is used to skip the current step and proceed to the next step in the journey. This is useful when you want to
+  # conditionally skip a step based on some business logic without canceling the entire journey. For example,
+  # you might want to skip a reminder email step if the user has already taken the required action.
+  #
+  # If there are more steps after the current step, `skip!` will schedule the next step to be performed.
+  # If the current step is the last step in the journey, `skip!` will finish the journey.
+  #
+  # `skip!` may be called within a step or outside of a step for journeys in the `ready` state.
+  # When called outside of a step, it will skip the next scheduled step and proceed to the following step.
+  #
+  # @return void
+  def skip!
+    if @current_step_definition
+      # Called within a step - set flag to skip current step
+      @skip_current_step = true
+      throw :abort_step if @current_step_definition
+    else
+      # Called outside of a step - skip next scheduled step
+      with_lock do
+        raise "skip! can only be used on journeys in the `ready` state, but was in #{state.inspect}" unless ready?
+
+        current_step_name = next_step_name
+        current_step_definition = lookup_step_definition(current_step_name)
+
+        unless current_step_definition
+          logger.warn { "no step definition found for #{current_step_name} - finishing journey" }
+          finished!
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+          return
+        end
+
+        current_step_seq = current_step_definition.seq
+        next_step_definition = step_definitions[current_step_seq + 1]
+
+        if next_step_definition
+          # There are more steps after this one - schedule the next step
+          logger.info { "skipping scheduled step #{current_step_name}, will continue to #{next_step_definition.name}" }
+          set_next_step_and_enqueue(next_step_definition)
+          ready!
+        else
+          # This is the last step - finish the journey
+          logger.info { "skipping scheduled step #{current_step_name}, finishing journey" }
+          finished!
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+        end
+      end
+    end
+  end
+
   # Is used to pause a Journey at any point. The "paused" state is similar to the "ready" state, except that "perform_next_step!" on the
   # journey will do nothing - even if it is scheduled to be performed. Pausing a Journey can be useful in the following situations:
   #

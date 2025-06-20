@@ -255,6 +255,22 @@ module StepperMotor
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
         set_next_step_and_enqueue(@current_step_definition, wait: @reattempt_after)
         ready!
+      elsif @skip_current_step
+        # The step asked to be skipped
+        current_step_seq = @current_step_definition.seq
+        next_step_definition = step_definitions[current_step_seq + 1]
+
+        if next_step_definition
+          # There are more steps after this one - schedule the next step
+          logger.info { "skipping current step #{current_step_name}, will continue to #{next_step_definition.name}" }
+          set_next_step_and_enqueue(next_step_definition)
+          ready!
+        else
+          # This is the last step - finish the journey
+          logger.info { "skipping current step #{current_step_name}, finishing journey" }
+          finished!
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+        end
       elsif finished?
         logger.info { "was marked finished inside the step" }
         update!(previous_step_name: current_step_name, next_step_name: nil)
@@ -273,6 +289,7 @@ module StepperMotor
       # and not via background jobs (which reload the model). This should actually be solved
       # using some object that contains the state of the action later, but for now - the dirty approach is fine.
       @reattempt_after = nil
+      @skip_current_step = nil
       @current_step_definition = nil
       # Re-raise the exception, now that we have persisted the Journey according to the recovery policy
       if ex_rescued_at_perform
