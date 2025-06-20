@@ -36,4 +36,28 @@ module StepperMotor
       BaseJob.class_eval(&blk)
     end
   end
+
+  def self.wrap_conditional(cond, negate: false)
+    callable = case cond
+    when Array
+      wrapped = cond.map {|e| wrap_conditional(e, negate: false) }
+      Proc.new do |*a, **k|
+        wrapped.all? {|e| e.call(*a, **k) }
+      end
+    when Symbol
+      Proc.new { send(cond) ? true : false }
+    else
+      if cond.respond_to?(:call)
+        Proc.new { cond.call ? true : false }
+      else
+        Proc.new { cond ? true : false }
+      end
+    end
+
+    if negate
+      Proc.new { |*a, **k| !callable.call(*a, **k) }
+    else
+      callable
+    end
+  end
 end
