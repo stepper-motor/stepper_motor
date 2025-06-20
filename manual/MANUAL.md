@@ -441,11 +441,11 @@ When a step's condition evaluates to `false`, the step is skipped and the journe
 
 ```ruby
 class UserOnboardingJourney < StepperMotor::Journey
-  step :send_welcome_email, if: :should_send_welcome do
+  step :send_welcome_email, if: :should_send_welcome? do
     WelcomeMailer.welcome(hero).deliver_later
   end
 
-  step :send_premium_offer, if: :is_premium_user do
+  step :send_premium_offer, if: :is_premium_user? do
     PremiumOfferMailer.exclusive_offer(hero).deliver_later
   end
 
@@ -455,11 +455,11 @@ class UserOnboardingJourney < StepperMotor::Journey
 
   private
 
-  def should_send_welcome
+  def should_send_welcome?
     hero.email.present? && !hero.welcome_email_sent?
   end
 
-  def is_premium_user
+  def is_premium_user?
     hero.subscription&.premium?
   end
 end
@@ -475,12 +475,8 @@ class OrderProcessingJourney < StepperMotor::Journey
     OrderConfirmationMailer.confirm(hero).deliver_later
   end
 
-  step :process_payment, if: -> { hero.payment_required? } do
+  step :process_payment
     PaymentProcessor.charge(hero)
-  end
-
-  step :ship_order, if: -> { hero.paid? && hero.inventory_available? } do
-    ShippingService.ship(hero)
   end
 end
 ```
