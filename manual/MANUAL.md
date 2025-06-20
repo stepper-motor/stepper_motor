@@ -427,6 +427,111 @@ class Erasure < StepperMotor::Journey
 end
 ```
 
+### Conditional steps with `if:`
+
+You can make steps conditional by using the `if:` parameter. This allows you to skip steps based on runtime conditions. The `if:` parameter accepts:
+
+* A symbol (method name) that returns a boolean.
+* A callable (lambda or proc) that returns a boolean. It will be `instance_exec`d in the context of the Journey.
+* A literal boolean value (`true` or `false`) or a `nil` (treated as `false`)
+
+When a step's condition evaluates to `false`, the step is skipped and the journey continues to the next step. If there are no more steps, the journey finishes.
+
+#### Using method names as conditions
+
+```ruby
+class UserOnboardingJourney < StepperMotor::Journey
+  step :send_welcome_email, if: :should_send_welcome do
+    WelcomeMailer.welcome(hero).deliver_later
+  end
+
+  step :send_premium_offer, if: :is_premium_user do
+    PremiumOfferMailer.exclusive_offer(hero).deliver_later
+  end
+
+  step :complete_onboarding do
+    hero.update!(onboarding_completed_at: Time.current)
+  end
+
+  private
+
+  def should_send_welcome
+    hero.email.present? && !hero.welcome_email_sent?
+  end
+
+  def is_premium_user
+    hero.subscription&.premium?
+  end
+end
+```
+
+#### Using callable conditions
+
+You can use lambdas or procs for more dynamic conditions. They will be `instance_exec`d in the context of the Journey.:
+
+```ruby
+class OrderProcessingJourney < StepperMotor::Journey
+  step :send_confirmation, if: -> { hero.email.present? } do
+    OrderConfirmationMailer.confirm(hero).deliver_later
+  end
+
+  step :process_payment, if: -> { hero.payment_required? } do
+    PaymentProcessor.charge(hero)
+  end
+
+  step :ship_order, if: -> { hero.paid? && hero.inventory_available? } do
+    ShippingService.ship(hero)
+  end
+end
+```
+
+Because conditions are `instance_exec`d they can access instance variables and can change during journey execution:
+
+```ruby
+class DataProcessingJourney < StepperMotor::Journey
+  step :validate_data, if: -> { @validation_needed } do
+    DataValidator.validate(hero.data)
+    @validation_needed = false
+  end
+
+  step :process_data do
+    hero.process_data!
+    @validation_needed = true  # Enable validation for next iteration
+  end
+
+  step :finalize, if: -> { @validation_needed } do
+    hero.finalize!
+  end
+
+  def initialize(*args)
+    super
+    @validation_needed = true
+  end
+end
+```
+
+#### Skipping steps with literal conditions
+
+You can use literal boolean values to conditionally include or exclude steps:
+
+```ruby
+class FeatureFlagJourney < StepperMotor::Journey
+  step :new_feature_step, if: Rails.application.config.new_feature_enabled do
+    NewFeatureService.process(hero)
+  end
+
+  step :legacy_step, if: ENV["PERFORM_LEGACY_STEP"] do  # This step will never execute
+    LegacyService.process(hero)
+  end
+
+  step :always_execute do
+    # This step always runs
+  end
+end
+```
+
+When a step is skipped due to a false condition, the journey seamlessly continues to the next step without any interruption - or finishes if that step was the last one.
+
 ### Waiting for the start of the step
 
 You configure how long a step should wait before starting using the `wait:` parameter. The `wait:` can be arbirarily long - but must be finite:
@@ -689,6 +794,3 @@ end
 It can be helpful to understand how exception handling is done by stepper_motor internally: when performing the step, any exceptions raised from within the step will be stored in a local variable to allow the Journey to be released as `ready`, `finished`, `canceled` or `paused`.
 
 That exception will is then going to be raised from within an `ensure` block, but only after the persistence of the Journey has been taken care of. This way the Journey has way more chance to reach a stable persisted state where it can be recovered (provided the database accepts the write, of course).
-
-
-
