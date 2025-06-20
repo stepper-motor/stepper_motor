@@ -36,12 +36,7 @@ class StepperMotor::Step
     @wait = wait
     @seq = seq
     @on_exception = on_exception # TODO: Validate?
-    @skip_if_condition = skip_if
-
-    # Validate the skip_if condition
-    if ![true, false, nil].include?(@skip_if_condition) && !@skip_if_condition.is_a?(Symbol) && !@skip_if_condition.respond_to?(:call)
-      raise ArgumentError, "skip_if: condition must be a boolean, nil, Symbol or a callable object, but was a #{@skip_if_condition.inspect}"
-    end
+    @skip_if_condition = StepperMotor.wrap_conditional(skip_if)
   end
 
   # Checks if the step should be skipped based on the skip_if condition
@@ -49,14 +44,7 @@ class StepperMotor::Step
   # @param journey[StepperMotor::Journey] the journey to check the condition for
   # @return [Boolean] true if the step should be skipped, false otherwise
   def should_skip?(journey)
-    case @skip_if_condition
-    when true, false, nil
-      !!@skip_if_condition
-    when Symbol
-      journey.send(@skip_if_condition) # Allow private methods
-    else
-      journey.instance_exec(&@skip_if_condition)
-    end
+    journey.instance_exec(&@skip_if_condition)
   end
 
   # Performs the step on the passed Journey, wrapping the step with the required context.

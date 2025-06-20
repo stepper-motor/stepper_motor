@@ -3,6 +3,12 @@
 require "test_helper"
 
 class WrapConditionalTest < ActiveSupport::TestCase
+
+  # Validate the skip_if condition
+  # if ![true, false, nil].include?(@skip_if_condition) && !@skip_if_condition.is_a?(Symbol) && !@skip_if_condition.respond_to?(:call)
+  #   raise ArgumentError, "skip_if: condition must be a boolean, nil, Symbol or a callable object, but was a #{@skip_if_condition.inspect}"
+  # end
+  
   test "wraps true without negate" do
     proc = StepperMotor.wrap_conditional true
     assert_equal true, proc.call

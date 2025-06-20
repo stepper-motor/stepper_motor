@@ -92,19 +92,8 @@ module StepperMotor
         raise StepConfigurationError, "Either skip_if: or if: can be specified, but not both"
       end
       if additional_step_definition_options.key?(:if)
-        if_condition = additional_step_definition_options.delete(:if)
-        # Convert if: to skip_if: by negating either the actual value or the return value of the callable
-        # if: truthy means perform, skip_if: truthy means "skip"
-        additional_step_definition_options[:skip_if] = case if_condition
-        when true, false, nil
-          !if_condition
-        when Symbol
-          # For symbols, we need to create a proc that negates the result
-          -> { !send(if_condition) }
-        else
-          # For callables, we need to create a proc that negates the result
-          -> { !instance_exec(&if_condition) }
-        end
+        # Convert if: to skip_if:
+        additional_step_definition_options[:skip_if] = StepperMotor.wrap_conditional(additional_step_definition_options.delete(:if), negate: true)
       end
 
       wait = if wait && after
