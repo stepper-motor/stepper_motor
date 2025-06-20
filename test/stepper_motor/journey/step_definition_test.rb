@@ -432,4 +432,33 @@ class StepDefinitionTest < ActiveSupport::TestCase
     end
     assert journey.finished?
   end
+
+  test "treats nil as false in if condition" do
+    journey_class = create_journey_subclass do
+      step :one, if: nil do
+        SideEffects.touch!("step executed")
+      end
+
+      step :two do
+        SideEffects.touch!("second step executed")
+      end
+    end
+
+    journey = journey_class.create!
+    speedrun_journey(journey)
+    assert SideEffects.produced?("second step executed")
+    refute SideEffects.produced?("step executed")
+  end
+
+  test "treats nil as false and finishes journey if no more steps" do
+    journey_class = create_journey_subclass do
+      step :one, if: nil do
+        SideEffects.touch!("step executed")
+      end
+    end
+
+    journey = journey_class.create!
+    speedrun_journey(journey)
+    refute SideEffects.produced?("step executed")
+  end
 end

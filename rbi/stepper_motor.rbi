@@ -34,14 +34,14 @@ module StepperMotor
     # 
     # _@param_ `on_exception` — the action to take if an exception occurs when performing the step. The possible values are: * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising. * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
     # 
-    # _@param_ `if` — condition to check before performing the step. If a symbol is provided, it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context. The step will only be performed if the condition returns a truthy value.
+    # _@param_ `if` — condition to check before performing the step. If a boolean is provided, it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided, it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context. The step will only be performed if the condition returns a truthy value.
     sig do
       params(
         name: T.any(String, Symbol),
         seq: T.untyped,
         on_exception: Symbol,
         wait: T.any(Numeric, ActiveSupport::Duration),
-        if: T.any(TrueClass, FalseClass, Symbol, Proc),
+        if: T.any(TrueClass, FalseClass, NilClass, Symbol, Proc),
         step_block: T.untyped
       ).void
     end
