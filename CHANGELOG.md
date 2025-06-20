@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.16] - 2025-06-20
+
 - Add `skip!` flow control method to skip the current (or next) step and move on to the subsequent step, or finish the journey.
 - Rename `if:` parameter to `skip_if:` for better clarity. The `if:` parameter is still supported for brevity.
 
