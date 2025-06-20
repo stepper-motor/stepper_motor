@@ -78,12 +78,35 @@ module StepperMotor
     #    attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition.
     #    Mutually exclusive with `wait:`
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
+    # @param skip_if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
+    #    it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
+    #    The step will be skipped if the condition returns a truthy value.
     # @param if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
     #    it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
-    #    The step will only be performed if the condition returns a truthy value.
+    #    The step will be performed if the condition returns a truthy value. and skipped otherwise. Inverse of `skip_if`.
     # @param additional_step_definition_options[Hash] Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, on_exception: :pause!, if: true, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk)
+      # Handle the if: alias for backward compatibility
+      if additional_step_definition_options.key?(:if) && additional_step_definition_options.key?(:skip_if)
+        raise StepConfigurationError, "Either skip_if: or if: can be specified, but not both"
+      end
+      if additional_step_definition_options.key?(:if)
+        if_condition = additional_step_definition_options.delete(:if)
+        # Convert if: to skip_if: by negating either the actual value or the return value of the callable
+        # if: truthy means perform, skip_if: truthy means "skip"
+        additional_step_definition_options[:skip_if] = case if_condition
+        when true, false, nil
+          !if_condition
+        when Symbol
+          # For symbols, we need to create a proc that negates the result
+          -> { !send(if_condition) }
+        else
+          # For callables, we need to create a proc that negates the result
+          -> { !instance_exec(&if_condition) }
+        end
+      end
+
       wait = if wait && after
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
       elsif !wait && !after
@@ -100,8 +123,8 @@ module StepperMotor
         raise StepConfigurationError, <<~MSG
           Step #{step_definitions.length + 1} of #{self} has no explicit name,
           and no block with step definition has been provided. Without a name the step
-          must be defined with a block to execute. If you want an instance method to be
-          executed as a step, pass the name of the method as the name of the step.
+          must be defined with a block to execute. If you want an instance method of
+          this Journey to be used as the step, pass the name of the method as the name of the step.
         MSG
       end
 
@@ -112,7 +135,7 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, on_exception:, if: binding.local_variable_get(:if), **additional_step_definition_options, &blk).tap do |step_definition|
+      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, **additional_step_definition_options, &blk).tap do |step_definition|
         # As per Rails docs: you need to be aware when using class_attribute with mutable structures
         # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
         # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
@@ -232,6 +255,22 @@ module StepperMotor
         logger.info { "will reattempt #{current_step_name} in #{@reattempt_after} seconds" }
         set_next_step_and_enqueue(@current_step_definition, wait: @reattempt_after)
         ready!
+      elsif @skip_current_step
+        # The step asked to be skipped
+        current_step_seq = @current_step_definition.seq
+        next_step_definition = step_definitions[current_step_seq + 1]
+
+        if next_step_definition
+          # There are more steps after this one - schedule the next step
+          logger.info { "skipping current step #{current_step_name}, will continue to #{next_step_definition.name}" }
+          set_next_step_and_enqueue(next_step_definition)
+          ready!
+        else
+          # This is the last step - finish the journey
+          logger.info { "skipping current step #{current_step_name}, finishing journey" }
+          finished!
+          update!(previous_step_name: current_step_name, next_step_name: nil)
+        end
       elsif finished?
         logger.info { "was marked finished inside the step" }
         update!(previous_step_name: current_step_name, next_step_name: nil)
@@ -250,6 +289,7 @@ module StepperMotor
       # and not via background jobs (which reload the model). This should actually be solved
       # using some object that contains the state of the action later, but for now - the dirty approach is fine.
       @reattempt_after = nil
+      @skip_current_step = nil
       @current_step_definition = nil
       # Re-raise the exception, now that we have persisted the Journey according to the recovery policy
       if ex_rescued_at_perform

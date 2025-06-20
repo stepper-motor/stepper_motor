@@ -427,9 +427,9 @@ class Erasure < StepperMotor::Journey
 end
 ```
 
-### Conditional steps with `if:`
+### Conditional steps with `skip_if:`
 
-You can make steps conditional by using the `if:` parameter. This allows you to skip steps based on runtime conditions. The `if:` parameter accepts:
+You can make steps conditional by using the `skip_if:` parameter. This allows you to skip steps based on runtime conditions. The `skip_if:` parameter accepts:
 
 * A symbol (method name) that returns a boolean.
 * A callable (lambda or proc) that returns a boolean. It will be `instance_exec`d in the context of the Journey.
@@ -437,15 +437,17 @@ You can make steps conditional by using the `if:` parameter. This allows you to 
 
 When a step's condition evaluates to `false`, the step is skipped and the journey continues to the next step. If there are no more steps, the journey finishes.
 
+> **Note:** The `if:` parameter is also supported as an alias for `skip_if:` for backward compatibility, but `skip_if:` is the preferred parameter name.
+
 #### Using method names as conditions
 
 ```ruby
 class UserOnboardingJourney < StepperMotor::Journey
-  step :send_welcome_email, if: :should_send_welcome? do
+  step :send_welcome_email, skip_if: :should_send_welcome? do
     WelcomeMailer.welcome(hero).deliver_later
   end
 
-  step :send_premium_offer, if: :is_premium_user? do
+  step :send_premium_offer, skip_if: :is_premium_user? do
     PremiumOfferMailer.exclusive_offer(hero).deliver_later
   end
 
@@ -471,7 +473,7 @@ You can use lambdas or procs for more dynamic conditions. They will be `instance
 
 ```ruby
 class OrderProcessingJourney < StepperMotor::Journey
-  step :send_confirmation, if: -> { hero.email.present? } do
+  step :send_confirmation, skip_if: -> { hero.email.present? } do
     OrderConfirmationMailer.confirm(hero).deliver_later
   end
 
@@ -487,11 +489,11 @@ You can use literal boolean values to conditionally include or exclude steps:
 
 ```ruby
 class FeatureFlagJourney < StepperMotor::Journey
-  step :new_feature_step, if: Rails.application.config.new_feature_enabled do
+  step :new_feature_step, skip_if: Rails.application.config.new_feature_enabled do
     NewFeatureService.process(hero)
   end
 
-  step :legacy_step, if: ENV["PERFORM_LEGACY_STEP"] do  # This step will never execute
+  step :legacy_step, skip_if: ENV["PERFORM_LEGACY_STEP"] do  # This step will never execute
     LegacyService.process(hero)
   end
 
@@ -548,23 +550,32 @@ stateDiagram-v2
 
 ## Flow control within steps
 
-Inside a step, you currently can use the following flow control methods:
+You currently can use the following flow control methods, both when a step is performing and on a Journey fetched from the database:
 
 * `cancel!` - cancel the Journey immediately. It will be persisted and moved into the `canceled` state.
 * `reattempt!` - reattempt the Journey immediately, triggering it asynchronously. It will be persisted
     and returned into the `ready` state. You can specify the `wait:` interval, which may deviate from
-    the wait time defined for the current step
+    the wait time defined for the current step. `reattepmt!` cannot be used outside of steps!
 * `pause!` - pause the Journey either within a step or outside of one. This moves the Journey into the `paused` state.
     In that state, the journey is still considered unique-per-hero (you won't be able to create an identical Journey)
     but it will not be picked up by the scheduled step jobs. Should it get picked up, the step will not be performed.
     You have to explicitly `resume!` the Journey to make it `ready` - once you do, a new job will be scheduled to
     perform the step.
+* `skip!` - skip either the step currently being performed or the step scheduled to be taken next, and proceed to the next
+    step in the journey. This is useful when you want to conditionally skip a step based on some business logic without
+    canceling the entire journey. For example, you might want to skip a reminder email step if the user has already taken the required action.
+    
+    If there are more steps after the current step, `skip!` will schedule the next step to be performed.
+    If the current step is the last step in the journey, `skip!` will finish the journey.
 
 > [!IMPORTANT]  
-> Flow control methods use `throw` when they are called from inside a step. Unlike Rails `render` or `redirect` that require an explicit
-> `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed, so those methods may only be called once within a particular scope.
+> Flow control methods use `throw` when they are called during step execution. Unlike Rails `render` or `redirect` that require an explicit
+> `return`, the code following a `reattempt!` or `cancel!` within the same scope will not be executed inside steps, so those methods may only be called once within a particular scope.
 
-You can't call those methods outside of the context of a performing step, and an exception is going to be raised if you do.
+Most of those methods do the right thing both inside steps and outside step execution. The only exception is `reattempt!`.
+
+> [!IMPORTANT]  
+> `reattempt!` only works inside of steps.
 
 ## Transactional semantics within steps
 
