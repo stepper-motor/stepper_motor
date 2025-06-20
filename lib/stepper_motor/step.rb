@@ -24,36 +24,36 @@ class StepperMotor::Step
   #   The possible values are:
   #   * `:cancel!` - cancels the Journey and re-raises the exception. The Journey will be persisted before re-raising.
   #   * `:reattempt!` - reattempts the Journey and re-raises the exception. The Journey will be persisted before re-raising.
-  # @param if[TrueClass,FalseClass,NilClass,Symbol,Proc] condition to check before performing the step. If a boolean is provided,
+  # @param skip_if[TrueClass,FalseClass,NilClass,Symbol,Proc] condition to check before performing the step. If a boolean is provided,
   #   it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided,
   #   it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
   #   The step will only be performed if the condition returns a truthy value.
-  def initialize(name:, seq:, on_exception:, wait: 0, if: true, &step_block)
+  def initialize(name:, seq:, on_exception: :pause!, wait: 0, skip_if: false, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait
     @seq = seq
     @on_exception = on_exception # TODO: Validate?
-    @if_condition = binding.local_variable_get(:if) # Done this way because `if` is a reserved keyword
+    @skip_if_condition = skip_if
 
-    # Validate the if condition
-    if ![true, false, nil].include?(@if_condition) && !@if_condition.is_a?(Symbol) && !@if_condition.respond_to?(:call)
-      raise ArgumentError, "if: condition must be a boolean, nil, Symbol or a callable object, but was a #{@if_condition.inspect}"
+    # Validate the skip_if condition
+    if ![true, false, nil].include?(@skip_if_condition) && !@skip_if_condition.is_a?(Symbol) && !@skip_if_condition.respond_to?(:call)
+      raise ArgumentError, "skip_if: condition must be a boolean, nil, Symbol or a callable object, but was a #{@skip_if_condition.inspect}"
     end
   end
 
-  # Checks if the step should be performed based on the if condition
+  # Checks if the step should be skipped based on the skip_if condition
   #
   # @param journey[StepperMotor::Journey] the journey to check the condition for
-  # @return [Boolean] true if the step should be performed, false otherwise
-  def should_perform?(journey)
-    case @if_condition
+  # @return [Boolean] true if the step should be skipped, false otherwise
+  def should_skip?(journey)
+    case @skip_if_condition
     when true, false, nil
-      !!@if_condition
+      !!@skip_if_condition
     when Symbol
-      journey.send(@if_condition) # Allow private methods
+      journey.send(@skip_if_condition) # Allow private methods
     else
-      journey.instance_exec(&@if_condition)
+      journey.instance_exec(&@skip_if_condition)
     end
   end
 
@@ -65,9 +65,9 @@ class StepperMotor::Step
   #   journey will be called
   # @return void
   def perform_in_context_of(journey)
-    # Return early should the `if` condition be false
-    if !should_perform?(journey)
-      journey.logger.info { "skipping as if: condition was falsey or returned false" }
+    # Return early should the `skip_if` condition be truthy
+    if should_skip?(journey)
+      journey.logger.info { "skipping as skip_if: condition was truthy" }
       return
     end
 

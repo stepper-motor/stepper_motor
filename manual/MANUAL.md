@@ -427,9 +427,9 @@ class Erasure < StepperMotor::Journey
 end
 ```
 
-### Conditional steps with `if:`
+### Conditional steps with `skip_if:`
 
-You can make steps conditional by using the `if:` parameter. This allows you to skip steps based on runtime conditions. The `if:` parameter accepts:
+You can make steps conditional by using the `skip_if:` parameter. This allows you to skip steps based on runtime conditions. The `skip_if:` parameter accepts:
 
 * A symbol (method name) that returns a boolean.
 * A callable (lambda or proc) that returns a boolean. It will be `instance_exec`d in the context of the Journey.
@@ -437,15 +437,17 @@ You can make steps conditional by using the `if:` parameter. This allows you to 
 
 When a step's condition evaluates to `false`, the step is skipped and the journey continues to the next step. If there are no more steps, the journey finishes.
 
+> **Note:** The `if:` parameter is also supported as an alias for `skip_if:` for backward compatibility, but `skip_if:` is the preferred parameter name.
+
 #### Using method names as conditions
 
 ```ruby
 class UserOnboardingJourney < StepperMotor::Journey
-  step :send_welcome_email, if: :should_send_welcome? do
+  step :send_welcome_email, skip_if: :should_send_welcome? do
     WelcomeMailer.welcome(hero).deliver_later
   end
 
-  step :send_premium_offer, if: :is_premium_user? do
+  step :send_premium_offer, skip_if: :is_premium_user? do
     PremiumOfferMailer.exclusive_offer(hero).deliver_later
   end
 
@@ -471,7 +473,7 @@ You can use lambdas or procs for more dynamic conditions. They will be `instance
 
 ```ruby
 class OrderProcessingJourney < StepperMotor::Journey
-  step :send_confirmation, if: -> { hero.email.present? } do
+  step :send_confirmation, skip_if: -> { hero.email.present? } do
     OrderConfirmationMailer.confirm(hero).deliver_later
   end
 
@@ -487,11 +489,11 @@ You can use literal boolean values to conditionally include or exclude steps:
 
 ```ruby
 class FeatureFlagJourney < StepperMotor::Journey
-  step :new_feature_step, if: Rails.application.config.new_feature_enabled do
+  step :new_feature_step, skip_if: Rails.application.config.new_feature_enabled do
     NewFeatureService.process(hero)
   end
 
-  step :legacy_step, if: ENV["PERFORM_LEGACY_STEP"] do  # This step will never execute
+  step :legacy_step, skip_if: ENV["PERFORM_LEGACY_STEP"] do  # This step will never execute
     LegacyService.process(hero)
   end
 
