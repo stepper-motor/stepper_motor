@@ -66,7 +66,10 @@ class StepperMotor::Step
   # @return void
   def perform_in_context_of(journey)
     # Return early should the `if` condition be false
-    return unless should_perform?(journey)
+    if !should_perform?(journey)
+      journey.logger.debug { "skipping as if: condition was falsey or returned false" }
+      return
+    end
 
     # This is a tricky bit.
     #
@@ -89,7 +92,7 @@ class StepperMotor::Step
       end
     end
   rescue MissingDefinition
-    # This journey won't succeed with any number of reattempts, cancel it. Cancellation also will throw.
+    # This journey won't succeed with any number of reattempts, pause it.
     catch(:abort_step) { journey.pause! }
     raise
   rescue => e
@@ -100,6 +103,7 @@ class StepperMotor::Step
       catch(:abort_step) { journey.public_send(@on_exception) }
     else
       # Leave the journey hanging in the "performing" state
+      journey.logger.warn { "unusual on_exception: value (#{@on_exception.inspect}) - the journey will be left hanging in 'performing' state and will be collected as hung" }
     end
 
     # Re-raise the exception so that the Rails error handling can register it
