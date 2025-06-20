@@ -185,22 +185,6 @@ module StepperMotor
         return finished!
       end
 
-      # Check whether the step should be performed based on the if condition
-      unless @current_step_definition.should_perform?(self)
-        logger.debug { "skipping step #{current_step_name} due to if condition" }
-        # Skip this step and continue to the next one
-        if (next_step_definition = step_definitions[@current_step_definition.seq + 1])
-          logger.info { "will continue to #{next_step_definition.name}" }
-          set_next_step_and_enqueue(next_step_definition)
-          ready!
-        else
-          logger.info { "has finished" } # The hero's journey is complete
-          finished!
-          update!(previous_step_name: current_step_name, next_step_name: nil)
-        end
-        return
-      end
-
       # Is we tried to run the step but it is not yet time to do so,
       # enqueue a new job to perform it and stop
       if next_step_to_be_performed_at > Time.current

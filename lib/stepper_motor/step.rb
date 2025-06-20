@@ -65,6 +65,9 @@ class StepperMotor::Step
   #   journey will be called
   # @return void
   def perform_in_context_of(journey)
+    # Return early should the `if` condition be false
+    return unless should_perform?(journey)
+
     # This is a tricky bit.
     #
     # reattempt!, cancel! (and potentially - future flow control methods) all use `throw` to
@@ -93,12 +96,8 @@ class StepperMotor::Step
     # Act according to the set policy. The basic 2 for the moment are :reattempt! and :cancel!,
     # and can be applied by just calling the methods on the passed journey
     case @on_exception
-    when :reattempt!
-      catch(:abort_step) { journey.reattempt! }
-    when :cancel!
-      catch(:abort_step) { journey.cancel! }
-    when :pause!
-      catch(:abort_step) { journey.pause! }
+    when :reattempt!, :cancel!, :pause!
+      catch(:abort_step) { journey.public_send(@on_exception) }
     else
       # Leave the journey hanging in the "performing" state
     end
