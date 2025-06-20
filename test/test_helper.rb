@@ -32,10 +32,11 @@ module JourneyDefinitionHelper
     super
   end
 
-  def create_journey_subclass(parent_class = StepperMotor::Journey, &blk)
+  def create_journey_subclass(parent_class = nil, &blk)
     # https://stackoverflow.com/questions/4113479/dynamic-class-definition-with-a-class-name
     random_component = @class_names_rng.hex(8)
     random_name = "JourneySubclass_#{random_component}"
+    parent_class ||= StepperMotor::Journey
     klass = Class.new(parent_class, &blk)
     Object.const_set(random_name, klass)
     @dynamic_class_names << random_name
