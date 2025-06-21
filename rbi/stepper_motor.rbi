@@ -411,9 +411,11 @@ module StepperMotor
     # 
     # _@param_ `journey` — the journey to speedrun
     # 
+    # _@param_ `time_travel` — whether to use ActiveSupport time travel (default: true) Note: When time_travel is true, this method will permanently travel time forward and will not reset it back to the original time when the method exits.
+    # 
     # _@return_ — void
-    sig { params(journey: StepperMotor::Journey).returns(T.untyped) }
-    def speedrun_journey(journey); end
+    sig { params(journey: StepperMotor::Journey, time_travel: T::Boolean).returns(T.untyped) }
+    def speedrun_journey(journey, time_travel: true); end
 
     # Performs the named step of the journey without waiting for the time to perform the step.
     # 

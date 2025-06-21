@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- With `speedrun_journey`, use time travel by default
 - Allow steps to be placed relative to other steps using `before_step:` and `after_step:` keyword arguments
 - Use just-in-time index lookup instead of `Step#seq`
 

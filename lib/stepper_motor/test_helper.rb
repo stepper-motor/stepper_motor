@@ -8,14 +8,25 @@ module StepperMotor::TestHelper
   # has neither canceled nor finished, an exception will be raised.
   #
   # @param journey[StepperMotor::Journey] the journey to speedrun
+  # @param time_travel[Boolean] whether to use ActiveSupport time travel (default: true)
+  #   Note: When time_travel is true, this method will permanently travel time forward
+  #   and will not reset it back to the original time when the method exits.
   # @return void
-  def speedrun_journey(journey)
+  def speedrun_journey(journey, time_travel: true)
     journey.save!
     n_steps = journey.step_definitions.length
     n_steps.times do
       journey.reload
       break if journey.canceled? || journey.finished?
-      journey.update(next_step_to_be_performed_at: Time.current)
+
+      if time_travel
+        # Use time travel to move slightly ahead of the time when the next step should be performed
+        next_step_time = journey.next_step_to_be_performed_at
+        travel_to(next_step_time + 1.second)
+      else
+        # Update the journey's timestamp to bypass waiting periods
+        journey.update(next_step_to_be_performed_at: Time.current)
+      end
       journey.perform_next_step!
     end
     journey.reload
