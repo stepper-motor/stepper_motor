@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Use just-in-time index lookup instead of `Step#seq`
+
 ## [0.1.18] - 2025-06-20
 
 - Add `cancel_if` at Journey class level for blanket journey cancellation conditions. This makes it very easy to abort journeys across multiple steps.

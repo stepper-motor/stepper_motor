@@ -22,7 +22,6 @@ module StepperMotor
   # array of the Journey subclass. When the step gets performed, the block passed to the
   # constructor will be instance_exec'd with the Journey model being the context
   class Step
-    # sord omit - no YARD type given for "seq:", using untyped
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # Creates a new step definition
     # 
@@ -35,7 +34,6 @@ module StepperMotor
     # _@param_ `skip_if` — condition to check before performing the step. If a boolean is provided, it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided, it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context. The step will only be performed if the condition returns a truthy value.
     def initialize: (
                       name: (String | Symbol),
-                      seq: untyped,
                       ?on_exception: Symbol,
                       ?wait: (Numeric | ActiveSupport::Duration),
                       ?skip_if: (TrueClass | FalseClass | NilClass | Symbol | Proc)
@@ -61,9 +59,6 @@ module StepperMotor
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # _@return_ — how long to wait before performing the step
     attr_reader wait: (Numeric | ActiveSupport::Duration)
-
-    # sord omit - no YARD type given for :seq, using untyped
-    attr_reader seq: untyped
 
     class MissingDefinition < NoMethodError
     end
@@ -150,6 +145,13 @@ module StepperMotor
     # 
     # _@param_ `by_step_name` — the name of the step to find
     def self.lookup_step_definition: ((Symbol | String) by_step_name) -> SORD_ERROR_StepperMotorStep
+
+    # Returns all step definitions that follow the given step in the journey
+    # 
+    # _@param_ `step_definition` — the step to find the following steps for
+    # 
+    # _@return_ — the following steps, or empty array if this is the last step
+    def self.step_definitions_following: (StepperMotor::Step step_definition) -> ::Array[StepperMotor::Step]
 
     # sord omit - no YARD type given for "by_step_name", using untyped
     # sord omit - no YARD return type given, using untyped

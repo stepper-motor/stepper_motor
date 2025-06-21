@@ -255,7 +255,7 @@ class IfConditionTest < ActiveSupport::TestCase
   end
 
   test "passes skip_if: parameter to step definition" do
-    step_def = StepperMotor::Step.new(name: "a_step", seq: 1, on_exception: :reattempt!)
+    step_def = StepperMotor::Step.new(name: "a_step", on_exception: :reattempt!)
     assert_skip_if_parameter = ->(**options) {
       assert options.key?(:skip_if)
       assert_equal :test_condition, options[:skip_if]

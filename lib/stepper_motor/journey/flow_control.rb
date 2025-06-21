@@ -58,8 +58,7 @@ module StepperMotor::Journey::FlowControl
           return
         end
 
-        current_step_seq = current_step_definition.seq
-        next_step_definition = step_definitions[current_step_seq + 1]
+        next_step_definition = self.class.step_definitions_following(current_step_definition).first
 
         if next_step_definition
           # There are more steps after this one - schedule the next step

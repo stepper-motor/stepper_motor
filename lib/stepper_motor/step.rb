@@ -13,9 +13,6 @@ class StepperMotor::Step
   # @return [Numeric,ActiveSupport::Duration] how long to wait before performing the step
   attr_reader :wait
 
-  # @private
-  attr_reader :seq
-
   # Creates a new step definition
   #
   # @param name[String,Symbol] the name of the Step
@@ -30,11 +27,10 @@ class StepperMotor::Step
   #   it will be used directly. If nil is provided, it will be treated as false. If a symbol is provided,
   #   it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
   #   The step will only be performed if the condition returns a truthy value.
-  def initialize(name:, seq:, on_exception: :pause!, wait: 0, skip_if: false, &step_block)
+  def initialize(name:, on_exception: :pause!, wait: 0, skip_if: false, &step_block)
     @step_block = step_block
     @name = name.to_s
     @wait = wait
-    @seq = seq
     @on_exception = on_exception # TODO: Validate?
     @skip_if_condition = StepperMotor::Conditional.new(skip_if)
   end

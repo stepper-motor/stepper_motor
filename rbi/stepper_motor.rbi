@@ -24,7 +24,6 @@ module StepperMotor
   # array of the Journey subclass. When the step gets performed, the block passed to the
   # constructor will be instance_exec'd with the Journey model being the context
   class Step
-    # sord omit - no YARD type given for "seq:", using untyped
     # sord warn - ActiveSupport::Duration wasn't able to be resolved to a constant in this project
     # Creates a new step definition
     # 
@@ -38,14 +37,13 @@ module StepperMotor
     sig do
       params(
         name: T.any(String, Symbol),
-        seq: T.untyped,
         on_exception: Symbol,
         wait: T.any(Numeric, ActiveSupport::Duration),
         skip_if: T.any(TrueClass, FalseClass, NilClass, Symbol, Proc),
         step_block: T.untyped
       ).void
     end
-    def initialize(name:, seq:, on_exception: :pause!, wait: 0, skip_if: false, &step_block); end
+    def initialize(name:, on_exception: :pause!, wait: 0, skip_if: false, &step_block); end
 
     # Checks if the step should be skipped based on the skip_if condition
     # 
@@ -71,10 +69,6 @@ module StepperMotor
     # _@return_ — how long to wait before performing the step
     sig { returns(T.any(Numeric, ActiveSupport::Duration)) }
     attr_reader :wait
-
-    # sord omit - no YARD type given for :seq, using untyped
-    sig { returns(T.untyped) }
-    attr_reader :seq
 
     class MissingDefinition < NoMethodError
     end
@@ -168,6 +162,14 @@ module StepperMotor
     # _@param_ `by_step_name` — the name of the step to find
     sig { params(by_step_name: T.any(Symbol, String)).returns(SORD_ERROR_StepperMotorStep) }
     def self.lookup_step_definition(by_step_name); end
+
+    # Returns all step definitions that follow the given step in the journey
+    # 
+    # _@param_ `step_definition` — the step to find the following steps for
+    # 
+    # _@return_ — the following steps, or empty array if this is the last step
+    sig { params(step_definition: StepperMotor::Step).returns(T::Array[StepperMotor::Step]) }
+    def self.step_definitions_following(step_definition); end
 
     # sord omit - no YARD type given for "by_step_name", using untyped
     # sord omit - no YARD return type given, using untyped

@@ -127,7 +127,7 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      StepperMotor::Step.new(name: name, wait: wait, seq: step_definitions.length, **additional_step_definition_options, &blk).tap do |step_definition|
+      StepperMotor::Step.new(name: name, wait: wait, **additional_step_definition_options, &blk).tap do |step_definition|
         # As per Rails docs: you need to be aware when using class_attribute with mutable structures
         # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
         # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
@@ -142,6 +142,16 @@ module StepperMotor
     # @return [StepperMotor::Step?]
     def self.lookup_step_definition(by_step_name)
       step_definitions.find { |d| d.name.to_s == by_step_name.to_s }
+    end
+
+    # Returns all step definitions that follow the given step in the journey
+    #
+    # @param step_definition[StepperMotor::Step] the step to find the following steps for
+    # @return [Array<StepperMotor::Step>] the following steps, or empty array if this is the last step
+    def self.step_definitions_following(step_definition)
+      current_index = step_definitions.index(step_definition)
+      return [] unless current_index
+      step_definitions[(current_index + 1)..]
     end
 
     # Alias for the class attribute, for brevity
@@ -292,8 +302,7 @@ module StepperMotor
         ready!
       elsif @skip_current_step
         # The step asked to be skipped
-        current_step_seq = @current_step_definition.seq
-        next_step_definition = step_definitions[current_step_seq + 1]
+        next_step_definition = self.class.step_definitions_following(@current_step_definition).first
 
         if next_step_definition
           # There are more steps after this one - schedule the next step
@@ -309,7 +318,7 @@ module StepperMotor
       elsif finished?
         logger.info { "was marked finished inside the step" }
         update!(previous_step_name: current_step_name, next_step_name: nil)
-      elsif (next_step_definition = step_definitions[@current_step_definition.seq + 1])
+      elsif (next_step_definition = self.class.step_definitions_following(@current_step_definition).first)
         logger.info { "will continue to #{next_step_definition.name}" }
         set_next_step_and_enqueue(next_step_definition)
         ready!
@@ -337,8 +346,7 @@ module StepperMotor
 
     # @return [ActiveSupport::Duration]
     def time_remaining_until_final_step
-      current_step_seq = @current_step_definition&.seq || -1
-      subsequent_steps = step_definitions.select { |definition| definition.seq > current_step_seq }
+      subsequent_steps = @current_step_definition ? self.class.step_definitions_following(@current_step_definition) : step_definitions
       seconds_remaining = subsequent_steps.map { |definition| definition.wait.to_f }.sum
       seconds_remaining.seconds # Convert to ActiveSupport::Duration
     end
