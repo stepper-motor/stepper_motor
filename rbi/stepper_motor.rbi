@@ -133,7 +133,11 @@ module StepperMotor
     # 
     # _@param_ `wait` — the amount of time this step should wait before getting performed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time, and the `next_step_to_be_performed_at` attribute will be set to the current time plus the wait duration. Mutually exclusive with `after:`
     # 
-    # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`
+    # _@param_ `after` — the amount of time this step should wait before getting performed including all the previous waits. This allows you to set the wait time based on the time after the journey started, as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at` attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition. Mutually exclusive with `wait:`.
+    # 
+    # _@param_ `before_step` — the name of the step before which this step should be inserted. This allows you to control the order of steps by inserting a step before a specific existing step. The step name can be provided as a string or symbol. Mutually exclusive with `after_step:`.
+    # 
+    # _@param_ `after_step` — the name of the step after which this step should be inserted. This allows you to control the order of steps by inserting a step after a specific existing step. The step name can be provided as a string or symbol. Mutually exclusive with `before_step:`.
     # 
     # _@param_ `on_exception` — See {StepperMotor::Step#on_exception}
     # 
@@ -149,11 +153,13 @@ module StepperMotor
         name: T.nilable(String),
         wait: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
         after: T.nilable(T.any(Float, T.untyped, ActiveSupport::Duration)),
+        before_step: T.nilable(T.any(String, Symbol)),
+        after_step: T.nilable(T.any(String, Symbol)),
         additional_step_definition_options: T::Hash[T.untyped, T.untyped],
         blk: T.untyped
       ).returns(StepperMotor::Step)
     end
-    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk); end
+    def self.step(name = nil, wait: nil, after: nil, before_step: nil, after_step: nil, **additional_step_definition_options, &blk); end
 
     # sord warn - "StepperMotor::Step?" does not appear to be a type
     # Returns the `Step` object for a named step. This is used when performing a step, but can also

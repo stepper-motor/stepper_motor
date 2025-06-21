@@ -79,7 +79,13 @@ module StepperMotor
     #    as opposed to when the previous step has completed. When the journey gets scheduled, the triggering job is going to
     #    be delayed by this amount of time _minus the `wait` values of the preceding steps, and the `next_step_to_be_performed_at`
     #    attribute will be set to the current time. The `after` value gets converted into the `wait` value and passed to the step definition.
-    #    Mutually exclusive with `wait:`
+    #    Mutually exclusive with `wait:`.
+    # @param before_step[String,Symbol,nil] the name of the step before which this step should be inserted.
+    #    This allows you to control the order of steps by inserting a step before a specific existing step.
+    #    The step name can be provided as a string or symbol. Mutually exclusive with `after_step:`.
+    # @param after_step[String,Symbol,nil] the name of the step after which this step should be inserted.
+    #    This allows you to control the order of steps by inserting a step after a specific existing step.
+    #    The step name can be provided as a string or symbol. Mutually exclusive with `before_step:`.
     # @param on_exception[Symbol] See {StepperMotor::Step#on_exception}
     # @param skip_if[TrueClass,FalseClass,Symbol,Proc] condition to check before performing the step. If a symbol is provided,
     #    it will call the method on the Journey. If a block is provided, it will be executed with the Journey as context.
@@ -89,7 +95,7 @@ module StepperMotor
     #    The step will be performed if the condition returns a truthy value. and skipped otherwise. Inverse of `skip_if`.
     # @param additional_step_definition_options[Hash] Any remaining options get passed to `StepperMotor::Step.new` as keyword arguments.
     # @return [StepperMotor::Step] the step definition that has been created
-    def self.step(name = nil, wait: nil, after: nil, **additional_step_definition_options, &blk)
+    def self.step(name = nil, wait: nil, after: nil, before_step: nil, after_step: nil, **additional_step_definition_options, &blk)
       # Handle the if: alias for backward compatibility
       if additional_step_definition_options.key?(:if) && additional_step_definition_options.key?(:skip_if)
         raise StepConfigurationError, "Either skip_if: or if: can be specified, but not both"
@@ -99,11 +105,31 @@ module StepperMotor
         additional_step_definition_options[:skip_if] = StepperMotor::Conditional.new(additional_step_definition_options.delete(:if), negate: true)
       end
 
-      wait = if wait && after
+      # Validate before_step and after_step parameters
+      if before_step && after_step
+        raise StepConfigurationError, "Either before_step: or after_step: can be specified, but not both"
+      end
+
+      # Validate that referenced steps exist
+      if before_step
+        referenced_step = lookup_step_definition(before_step)
+        unless referenced_step
+          raise StepConfigurationError, "Step named #{before_step.inspect} not found for before_step: parameter"
+        end
+      end
+
+      if after_step
+        referenced_step = lookup_step_definition(after_step)
+        unless referenced_step
+          raise StepConfigurationError, "Step named #{after_step.inspect} not found for after_step: parameter"
+        end
+      end
+
+      wait = if wait && after&.respond_to?(:to_f)
         raise StepConfigurationError, "Either wait: or after: can be specified, but not both"
-      elsif !wait && !after
+      elsif !wait && (!after || !after.respond_to?(:to_f))
         0
-      elsif after
+      elsif after&.respond_to?(:to_f)
         accumulated = step_definitions.map(&:wait).sum
         after - accumulated
       else
@@ -127,12 +153,27 @@ module StepperMotor
       raise StepConfigurationError, "Step named #{name.inspect} already defined" if known_step_names.include?(name)
 
       # Create the step definition
-      StepperMotor::Step.new(name: name, wait: wait, **additional_step_definition_options, &blk).tap do |step_definition|
-        # As per Rails docs: you need to be aware when using class_attribute with mutable structures
-        # as Array or Hash. In such cases, you don't want to do changes in place. Instead use setters.
-        # See https://apidock.com/rails/v7.1.3.2/Class/class_attribute
+      step_definition = StepperMotor::Step.new(name: name, wait: wait, **additional_step_definition_options, &blk)
+
+      # Determine insertion position based on before_step or after_step parameters
+      if before_step
+        target_step = lookup_step_definition(before_step)
+        target_index = step_definitions.index(target_step)
+        new_step_definitions = step_definitions.dup
+        new_step_definitions.insert(target_index, step_definition)
+        self.step_definitions = new_step_definitions
+      elsif after_step
+        target_step = lookup_step_definition(after_step)
+        target_index = step_definitions.index(target_step)
+        new_step_definitions = step_definitions.dup
+        new_step_definitions.insert(target_index + 1, step_definition)
+        self.step_definitions = new_step_definitions
+      else
+        # Default behavior: append to the end
         self.step_definitions = step_definitions + [step_definition]
       end
+
+      step_definition
     end
 
     # Returns the `Step` object for a named step. This is used when performing a step, but can also

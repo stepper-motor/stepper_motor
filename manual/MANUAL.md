@@ -373,23 +373,54 @@ step :two do
 end
 ```
 
-You have a `Journey` which is about to start step `one`. When the step gets performed, stepper_motor will do a lookup to find _the next step in order of definition._ In this case the step will be step `two`, so the name of that step will be saved with the `Journey`. Imagine you then edit the code to add an extra step between those:
+Your existing `Journey` is already primed to perform step `two`. However, a `Journey` which is about to perform step `one` will now set `one_bis` as the next step to perform. This allows limited reordering and editing of `Journey` definitions after they have already begun.
+
+### Step ordering with `before_step:` and `after_step:`
+
+You can control the order of steps by inserting them before or after specific existing steps using the `before_step:` and `after_step:` parameters. This is useful when you want to add steps in the middle of a sequence without manually reordering all the steps.
+
+The step names can be provided as strings or symbols, and only one of `before_step:` or `after_step:` can be specified:
 
 ```ruby
-step :one do
-  # perform some action
-end
+class UserOnboardingJourney < StepperMotor::Journey
+  step :send_welcome_email do
+    WelcomeMailer.welcome(hero).deliver_later
+  end
 
-step :one_bis do
-  # some compliance action
-end
+  step :send_premium_offer, after: 2.days do
+    PremiumOfferMailer.exclusive_offer(hero).deliver_later
+  end
 
-step :two do
-  # perform some other action
+  # Insert a compliance check before the premium offer
+  step :compliance_check, before_step: "send_premium_offer" do
+    ComplianceService.verify_eligibility(hero)
+  end
+
+  # Insert a reminder after the welcome email
+  step :send_reminder, after_step: "send_welcome_email", wait: 1.day do
+    ReminderMailer.follow_up(hero).deliver_later
+  end
+
+  step :complete_onboarding, after: 7.days do
+    hero.update!(onboarding_completed_at: Time.current)
+  end
 end
 ```
+This approach is particularly useful when extending journey classes through inheritance, as you can insert steps relative to steps defined in the parent class.
+Should you ever get confused and find yourself in need to retrace your steps, call `UserOnboardingJourney.step_definitions.map(&:name)`:
 
-Your existing `Journey` is already primed to perform step `two`. However, a `Journey` which is about to perform step `one` will now set `one_bis` as the next step to perform. This allows limited reordering and editing of `Journey` definitions after they have already begun.
+```ruby
+UserOnboardingJourney.step_definitions.map(&:name)
+# => ["send_welcome_email", "send_reminder", "compliance_check", "send_premium_offer", "complete_onboarding"]
+```
+
+This will show you the exact order in which steps will be executed. In this case:
+
+1. `send_welcome_email`
+2. `send_reminder` (inserted after `send_welcome_email`)
+3. `compliance_check` (inserted before `send_premium_offer`)
+4. `send_premium_offer`
+5. `complete_onboarding`
 
 ### Using instance methods as steps
 
