@@ -27,7 +27,9 @@ So, stepper_motor aims to give you "just enough of Temporal-like functionality" 
 
 ## A brief introduction to stepper_motor
 
-stepper_motor is built around the concept of a `Journey`. A `Journey` [is a sequence of steps happening to a `hero`](https://en.wikipedia.org/wiki/Hero%27s_journey) - once launched, the journey will run until it either finishes or cancels. A `Journey` is just an `ActiveRecord` model, with all the persistence methods you already know and use.
+stepper_motor is built around the concept of a `Journey`. A `Journey` [is a sequence of steps happening to a `hero`](https://en.wikipedia.org/wiki/Hero%27s_journey) - once launched, the journey will run until it either finishes or cancels. But also - a `Journey` is an `ActiveRecord` model, with all the persistence methods you already know and use. Every `Journey` has a speficic identity - its primary key, just like any other database row, and carries state information.
+
+A `Journey` changes states during asynchronous invocations, and can lay dormant for months until the time comes to take the next step.
 
 Steps are defined inside the Journey subclasses as blocks, and they run in the context of that subclass' instance. The following constraints apply:
 
@@ -40,7 +42,7 @@ The `step` blocks get executed in the context of the `Journey` model instance. T
 
 The steps are performed asynchronously, via ActiveJob. When a Journey is created, it gets scheduled for its initial step. The job then gets picked up by the ActiveJob queue worker (whichever you are using) and triggers the step on the `Journey`. If the journey decides to continue to the next step, it schedules another ActiveJob for itself with the step name and other details necessary.
 
-No state is carried inside the job.
+No state is carried inside the job - both the state transition management and the steps are handled by the `Journey` itself.
 
 ## Installation
 
@@ -70,7 +72,7 @@ class SignupJourney < StepperMotor::Journey
   end
 end
 
-class SignupController
+class SignupController < ApplicationController
   def create
     # ...your other business actions
     SignupJourney.create!(hero: current_user)
