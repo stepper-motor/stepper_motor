@@ -648,6 +648,25 @@ end
 
 The `wait:` parameter defines the amount of time computed **from the moment the Journey gets created or the previous step is completed.**
 
+## Execution model: assume that everything is async
+
+stepper_motor is built on the assumption that steps should be able to execute asynchronously. This is a **very important** design trait which has a number of implications:
+
+* You will almost never have the same `self` for a Journey between multiple steps
+* Any instance variables you set inside a step will get discarded and will not be available in a subsequent step
+* Any step may want to reattempt itself at an arbitrary point in the future. Any stack variables or local state will be discarded.
+
+This is deliberate and intentional. At the moment, stepper_motor does not have any built-in primitives for executing multiple steps inline. The `speedrun_journey`
+helper used in tests is going to `reload` your Journey between step entries, to allow for any state changes to be blown away - but it is not going to reset any instance variables.
+
+A good way to think about it is: every step execution happens:
+
+* On a different machine
+* In a different thread
+* In a different database transaction
+* In the context of a different Journey instance
+* Potentially - after a long time has passed since the previous attempt or previous step
+
 ## Journey states
 
 The Journeys are managed using a state machine, which stepper_motor completely coordinates for you. The states are as follows:
