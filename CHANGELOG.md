@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.19] - 2025-06-25
+
 - With `speedrun_journey`, allow configuring the maximum number of steps - for testing journeys
   that iterate or reattempt a lot.
 - With `speedrun_journey`, use time travel by default
