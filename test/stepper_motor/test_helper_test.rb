@@ -22,6 +22,16 @@ class TestHelperTest < ActiveSupport::TestCase
     end
   end
 
+  def infinite_journey_class
+    create_journey_subclass do
+      step :step_1 do
+        SideEffects.touch!("step_1")
+        # This step never finishes, causing infinite loop
+        reattempt!
+      end
+    end
+  end
+
   test "speedruns the journey despite waits being configured" do
     journey = speedy_journey_class.create!
     assert journey.ready?
@@ -70,5 +80,24 @@ class TestHelperTest < ActiveSupport::TestCase
     SideEffects.clear!
     immediately_perform_single_step(journey, :step_2)
     assert SideEffects.produced?("step_2")
+  end
+
+  test "fails when maximum_steps limit is exceeded" do
+    journey = infinite_journey_class.create!
+    assert journey.ready?
+
+    SideEffects.clear!
+
+    # This should raise an exception because the journey will try to perform more than 2 steps
+    # but the infinite loop in step_1 will never finish
+    error = assert_raises(RuntimeError) do
+      speedrun_journey(journey, maximum_steps: 2)
+    end
+
+    # Verify the error message indicates the journey didn't finish after the maximum steps
+    assert_match(/did not finish or cancel after performing 2 steps/, error.message)
+
+    # Verify that the step was executed (at least once)
+    assert SideEffects.produced?("step_1")
   end
 end

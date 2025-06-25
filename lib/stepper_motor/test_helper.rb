@@ -11,10 +11,24 @@ module StepperMotor::TestHelper
   # @param time_travel[Boolean] whether to use ActiveSupport time travel (default: true)
   #   Note: When time_travel is true, this method will permanently travel time forward
   #   and will not reset it back to the original time when the method exits.
+  # @param maximum_steps[Symbol,Integer] how many steps can we take until we assume the
+  #   journey has hung and fail the test. Default value is :reasonable, which is 10x the
+  #   number of steps. :unlimited allows "a ton", but can make your test hang if your logic
+  #   lets a step reattempt indefinitely
   # @return void
-  def speedrun_journey(journey, time_travel: true)
+  def speedrun_journey(journey, time_travel: true, maximum_steps: :reasonable)
     journey.save!
-    n_steps = journey.step_definitions.length
+    n_steps = case maximum_steps
+    when :reasonable
+      journey.step_definitions.length * 10
+    when :unlimited
+      0xFFFF
+    when Integer
+      maximum_steps
+    else
+      raise ArgumentError, "maximum_steps may be :reasonable, :unlimited or an Integer, was #{maximum_steps.inspect}"
+    end
+
     n_steps.times do
       journey.reload
       break if journey.canceled? || journey.finished?

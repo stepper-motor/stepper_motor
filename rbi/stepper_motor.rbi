@@ -413,9 +413,11 @@ module StepperMotor
     # 
     # _@param_ `time_travel` — whether to use ActiveSupport time travel (default: true) Note: When time_travel is true, this method will permanently travel time forward and will not reset it back to the original time when the method exits.
     # 
+    # _@param_ `maximum_steps` — how many steps can we take until we assume the journey has hung and fail the test. Default value is :reasonable, which is 10x the number of steps. :unlimited allows "a ton", but can make your test hang if your logic lets a step reattempt indefinitely
+    # 
     # _@return_ — void
-    sig { params(journey: StepperMotor::Journey, time_travel: T::Boolean).returns(T.untyped) }
-    def speedrun_journey(journey, time_travel: true); end
+    sig { params(journey: StepperMotor::Journey, time_travel: T::Boolean, maximum_steps: T.any(Symbol, Integer)).returns(T.untyped) }
+    def speedrun_journey(journey, time_travel: true, maximum_steps: :reasonable); end
 
     # Performs the named step of the journey without waiting for the time to perform the step.
     # 
