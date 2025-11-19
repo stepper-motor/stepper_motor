@@ -40,7 +40,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "mysql2"
   spec.add_development_dependency "pg"
   spec.add_development_dependency "rake", "~> 13.0"
-  spec.add_development_dependency "standard", "~> 1.50.0", "< 2.0"
+  spec.add_development_dependency "standard", "~> 1.52.0", "< 2.0"
   spec.add_development_dependency "magic_frozen_string_literal"
   spec.add_development_dependency "yard"
   spec.add_development_dependency "redcarpet" # needed for the yard gem to enable Github Flavored Markdown
